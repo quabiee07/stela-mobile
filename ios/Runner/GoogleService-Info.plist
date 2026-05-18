@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>814460313565-32j99cksb8g0a8rvounog6h8h1ctigkq.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.814460313565-32j99cksb8g0a8rvounog6h8h1ctigkq</string>
+	<key>API_KEY</key>
+	<string>AIzaSyA8vb467nLsLPvnOd1y8Ui9VoOgFE1UqEY</string>
+	<key>GCM_SENDER_ID</key>
+	<string>814460313565</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.stelaMoblie</string>
+	<key>PROJECT_ID</key>
+	<string>stela-mobile</string>
+	<key>STORAGE_BUCKET</key>
+	<string>stela-mobile.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:814460313565:ios:4bec09b787395c9b05e034</string>
+</dict>
+</plist>

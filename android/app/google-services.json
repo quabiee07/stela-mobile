@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "814460313565",
+    "project_id": "stela-mobile",
+    "storage_bucket": "stela-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:814460313565:android:61e83dda253d9cff05e034",
+        "android_client_info": {
+          "package_name": "com.example.stela_moblie"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLC7o0BDlWqzDTwVNcpL91DyD05UEH0QM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
