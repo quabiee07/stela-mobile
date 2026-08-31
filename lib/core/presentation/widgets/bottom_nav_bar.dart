@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:stela_mobile/core/presentation/resources/drawables.dart';
-import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
-import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
-import 'package:stela_mobile/core/presentation/widgets/svg_image.dart';
 import 'package:sprung/sprung.dart';
+import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
+import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
+import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
+import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
+import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 
 class BottomNavBarItem {
   BottomNavBarItem({this.icon, required this.text});
 
-  String? icon;
+  AppIconData? icon;
   String text;
 
   static List<BottomNavBarItem> get items => [
-    BottomNavBarItem(text: 'Home', icon: home),
-    BottomNavBarItem(text: 'Library', icon: library),
-    BottomNavBarItem(text: 'Profile', icon: user),
-  ];
+        BottomNavBarItem(text: 'Home', icon: AppIcons.home),
+        BottomNavBarItem(text: 'Library', icon: AppIcons.library),
+        BottomNavBarItem(text: 'Profile', icon: AppIcons.profile),
+      ];
 }
 
 class BottomNavBar extends StatefulWidget {
@@ -28,6 +29,7 @@ class BottomNavBar extends StatefulWidget {
     this.height = 70.0,
     this.iconSize = 24.0,
     this.onTabSelected,
+    this.embedded = false,
   }) {
     assert(items?.length == 2 || items?.length == 3 || items?.length == 4);
   }
@@ -38,6 +40,9 @@ class BottomNavBar extends StatefulWidget {
   final ValueChanged<int>? onTabSelected;
   final int selectedIndex;
   final int currentIndex;
+
+  /// When true, renders only tab items — used inside [PlaybackDock].
+  final bool embedded;
 
   @override
   State<StatefulWidget> createState() =>
@@ -65,7 +70,7 @@ class _BottomNavBarState extends State<BottomNavBar>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    List<Widget> items = List.generate(widget.items!.length, (int index) {
+    final items = List.generate(widget.items!.length, (int index) {
       return _buildTabItem(
         item: widget.items![index],
         index: index,
@@ -79,29 +84,37 @@ class _BottomNavBarState extends State<BottomNavBar>
       );
     });
 
+    final bar = SizedBox(
+      height: widget.height,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: items,
+      ),
+    );
+
+    if (widget.embedded) {
+      return bar;
+    }
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 50.0),
         child: Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
+            color: context.isDarkTheme ? darkSurface : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.09),
+                color: Colors.black.withValues(
+                  alpha: context.isDarkTheme ? 0.35 : 0.09,
+                ),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: SizedBox(
-            height: widget.height,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: items,
-            ),
-          ),
+          child: bar,
         ),
       ),
     );
@@ -133,12 +146,12 @@ class _BottomNavBarState extends State<BottomNavBar>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SvgImage(
-                  asset: item.icon!,
-                  height: widget.iconSize,
+                AppIcon(
+                  item.icon!,
+                  size: widget.iconSize ?? 24,
                   color: widget.currentIndex == index
                       ? orange
-                      : const Color(0xFFCAD5E2),
+                      : context.iconMuted,
                 ),
                 Text(
                   item.text,
@@ -146,7 +159,7 @@ class _BottomNavBarState extends State<BottomNavBar>
                     fontSize: 14,
                     color: widget.currentIndex == index
                         ? orange
-                        : const Color(0xFFCAD5E2),
+                        : context.iconMuted,
                   ),
                 ),
               ],

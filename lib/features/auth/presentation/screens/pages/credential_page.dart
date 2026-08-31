@@ -1,34 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
-import 'package:provider/provider.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
-import 'package:stela_mobile/core/presentation/utils/custom_state.dart';
 import 'package:stela_mobile/core/presentation/widgets/input_field.dart';
-import 'package:stela_mobile/features/auth/presentation/manager/auth_provider.dart';
+import 'package:stela_mobile/features/auth/presentation/manager/auth_cubit.dart';
 
-class CredentialPage extends StatefulWidget {
+class CredentialPage extends StatelessWidget {
   const CredentialPage({super.key});
-
-  @override
-  State<CredentialPage> createState() => _CredentialPageState();
-}
-
-class _CredentialPageState extends CustomState<CredentialPage> {
-  AuthProvider? _provider;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Consumer<AuthProvider>(
-      builder: (_, provider, _) {
-        _provider ??= provider;
-        final state = provider.state;
+    return BlocBuilder<AuthCubit, AuthFormState>(
+      builder: (context, state) {
+        final cubit = context.read<AuthCubit>();
         return SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Let’s create your account",
+                'Let’s create your account',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontSize: 32,
                   fontWeight: FontWeight.w600,
@@ -36,7 +27,7 @@ class _CredentialPageState extends CustomState<CredentialPage> {
               ),
               const Gap(8),
               Text(
-                "Enter your email address and create a secure password to get started.",
+                'Enter your email address and create a secure password to get started.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -45,7 +36,7 @@ class _CredentialPageState extends CustomState<CredentialPage> {
               ),
               const Gap(20),
               Text(
-                "Email",
+                'Email',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -56,11 +47,11 @@ class _CredentialPageState extends CustomState<CredentialPage> {
                 hint: 'Enter email address',
                 value: state.email,
                 error: state.emailError,
-                onChange: (value) => provider.setEmail(value),
+                onChange: cubit.setEmail,
               ),
               const Gap(20),
               Text(
-                "Password",
+                'Password',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -71,13 +62,12 @@ class _CredentialPageState extends CustomState<CredentialPage> {
                 hint: 'Enter password',
                 value: state.password,
                 error: state.passwordError,
-                onChange: (value) => provider.setPassword(value),
+                onChange: cubit.setPassword,
                 isPassword: true,
               ),
-
               const Gap(20),
               Text(
-                "Confirm Password",
+                'Confirm Password',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -88,7 +78,7 @@ class _CredentialPageState extends CustomState<CredentialPage> {
                 hint: 'Confirm password',
                 value: state.confirmPassword,
                 error: state.confirmPasswordError,
-                onChange: (value) => provider.setConfirmPassword(value),
+                onChange: cubit.setConfirmPassword,
                 isPassword: true,
               ),
               const Gap(40),

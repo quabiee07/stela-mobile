@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
+import 'package:stela_mobile/features/profile/presentation/manager/reading_preferences_cubit.dart';
 
 class LyricsWidget extends StatefulWidget {
   const LyricsWidget({
@@ -11,7 +14,7 @@ class LyricsWidget extends StatefulWidget {
   });
   final List<String> lines;
   final List<GlobalKey> lineKeys;
-  final List<int> lineCueSecs;
+  final List<double> lineCueSecs;
   final int currentLine;
   final Function(double) onSeek;
 
@@ -21,68 +24,135 @@ class LyricsWidget extends StatefulWidget {
 
 class _LyricsWidgetState extends State<LyricsWidget> {
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.transparent,
-          Colors.black,
-          Colors.black,
-          Colors.transparent,
-        ],
-        stops: [0.0, 0.12, 0.72, 1.0],
-      ).createShader(bounds),
-      blendMode: BlendMode.dstIn,
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 96),
-        child: Column(
-          children: List.generate(widget.lines.length, (i) {
-            final dist = (i - widget.currentLine).abs();
-            final isCurrent = dist == 0;
+    final lineColor = Theme.of(context).colorScheme.onSurface;
+    final baseStyle = Theme.of(context).textTheme.displayLarge!;
+    // Match the card behind lyrics (not scaffold) for edge fades.
+    final fadeColor = context.cardSurface;
 
-            // Progressive fade & size based on distance from active line
-            final double opacity = isCurrent
-                ? 1.0
-                : dist == 1
-                ? 0.40
-                : dist == 2
-                ? 0.22
-                : 0.10;
-
-            final double fontSize = 32;
-
-            final FontWeight weight = isCurrent
-                ? FontWeight.w600
-                : FontWeight.w400;
-
-            return Padding(
-              key: widget.lineKeys[i],
-              padding: const EdgeInsets.symmetric(vertical: 9),
-              child: GestureDetector(
-                onTap: () {
-                  // Tapping a line seeks to it (like YouTube Music)
-                  widget.onSeek(widget.lineCueSecs[i].toDouble());
-                },
-                child: AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                  style: Theme.of(context).textTheme.displayLarge!.copyWith(
-                    fontSize: fontSize,
-                    fontWeight: weight,
-                    color: Colors.black.withValues(alpha: opacity),
-                    height: 1.25,
-                    letterSpacing: 0,
-                  ),
-                  child: Text(widget.lines[i], textAlign: TextAlign.center),
+    // Soft fades via overlays instead of ShaderMask (expensive on device GPUs).
+    // Keep a Column so GlobalKey + ensureVisible can reach every line.
+    return Stack(
+      children: [
+        RepaintBoundary(
+          child: BlocBuilder<ReadingPreferencesCubit, ReadingPreferencesState>(
+            buildWhen: (prev, curr) =>
+                prev.textSizeScale != curr.textSizeScale,
+            builder: (context, prefs) {
+              return SingleChildScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(8, 28, 8, 36),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < widget.lines.length; i++)
+                      _LyricLine(
+                        key: widget.lineKeys[i],
+                        text: widget.lines[i],
+                        isCurrent: i == widget.currentLine,
+                        distance: (i - widget.currentLine).abs(),
+                        lineColor: lineColor,
+                        baseStyle: baseStyle,
+                        fontSize: prefs.lyricFontSize,
+                        onTap: () => widget.onSeek(widget.lineCueSecs[i]),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 28,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [fadeColor, fadeColor.withValues(alpha: 0)],
                 ),
               ),
-            );
-          }),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 36,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [fadeColor, fadeColor.withValues(alpha: 0)],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LyricLine extends StatelessWidget {
+  const _LyricLine({
+    super.key,
+    required this.text,
+    required this.isCurrent,
+    required this.distance,
+    required this.lineColor,
+    required this.baseStyle,
+    required this.fontSize,
+    required this.onTap,
+  });
+
+  final String text;
+  final bool isCurrent;
+  final int distance;
+  final Color lineColor;
+  final TextStyle baseStyle;
+  final double fontSize;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final opacity = isCurrent
+        ? 1.0
+        : distance == 1
+            ? 0.42
+            : distance == 2
+                ? 0.24
+                : 0.12;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: baseStyle.copyWith(
+            fontSize: fontSize,
+            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+            color: lineColor.withValues(alpha: opacity),
+            height: 1.4,
+            letterSpacing: -0.2,
+          ),
         ),
       ),
     );

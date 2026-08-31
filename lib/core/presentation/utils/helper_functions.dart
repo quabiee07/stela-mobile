@@ -50,6 +50,21 @@ Future<UserModel?> getCachedUser() async {
   return cachedUser;
 }
 
+/// Persists [cachedUser] (XP, level, streak) so profile can render after restart.
+Future<void> persistCachedUser() async {
+  final user = cachedUser;
+  if (user == null) return;
+  try {
+    final prefs = await getIt.getAsync<SharedPreferences>();
+    await prefs.setString(
+      userKey,
+      jsonEncode(UserModelDto.fromEntity(user).toJson()),
+    );
+  } catch (e) {
+    logg('Failed to persist cached user: $e');
+  }
+}
+
 String formatCurrency(dynamic number, {bool decimal = true}) {
   // Clean the input by removing currency symbol and commas
   String cleanNumber = number
@@ -65,7 +80,7 @@ String formatCurrency(dynamic number, {bool decimal = true}) {
 
     return '$naira${oCcy.format(double.parse(cleanNumber))}';
   } catch (e) {
-    print('Error formatting currency: $e');
+    logg('Error formatting currency: $e');
     return '${naira}0'; // Return default value if parsing fails
   }
 }

@@ -26,7 +26,7 @@ class VoiceModel {
   });
 }
 
-enum CategoryModel { PREMADE, PROFESSIONAL }
+enum CategoryModel { PREMADE, PROFESSIONAL, UNKNOWN }
 
 class FineTuningModel {
   LanguageModel? language;
@@ -34,12 +34,13 @@ class FineTuningModel {
   FineTuningModel({required this.language});
 }
 
-enum LanguageModel { EN }
+enum LanguageModel { EN, UNKNOWN }
 
 class LabelModel {
   String useCase;
   GenderModel gender;
-  AccentModel accent;
+  /// Free-form accent label from ElevenLabs (e.g. "american", "latin american").
+  String accent;
   AgeModel age;
   LanguageModel language;
   String? descriptive;
@@ -56,26 +57,14 @@ class LabelModel {
   });
 }
 
-enum AccentModel {
-  AMERICAN,
-  AUSTRALIAN,
-  BRAZILIAN,
-  BRITISH,
-  CENTRAL,
-  NORTHERN,
-  PENINSULAR,
-  SOUTHERN,
-  STANDARD,
-}
-
-enum AgeModel { MIDDLE_AGED, OLD, YOUNG }
+enum AgeModel { MIDDLE_AGED, OLD, YOUNG, UNKNOWN }
 
 enum GenderModel { FEMALE, MALE, NEUTRAL }
 
 class VerifiedLanguageModel {
   String language;
   String modelId;
-  AccentModel? accent;
+  String? accent;
   String? locale;
   String previewUrl;
 

@@ -53,7 +53,12 @@ const library = 'assets/vectors/notebook.svg';
 const user = 'assets/vectors/user-circle.svg';
 
 //IMAGES
-const stelaLogo = 'assets/images/stela_logo.png';
+// const stelaLogo = 'assets/images/stela_logo.png';
+const stelaLogo = 'assets/images/mascot.png';
+const mascot1 = 'assets/images/mascot1.png';
+const mascot2 = 'assets/images/mascot2.png';
+const mascot3 = 'assets/images/mascot3.png';
+const mascot4 = 'assets/images/mascot4.png';
 const onboarding1 = 'assets/images/onboard_img1.png';
 const onboarding2 = 'assets/images/onboard_img2.png';
 const onboarding3 = 'assets/images/onboard_img3.png';
@@ -91,6 +96,11 @@ const blurBg = 'assets/images/blur_bg.png';
 const nameBunny = 'assets/images/name_bunny.png';
 const pinkCheck = 'assets/images/pink-check.png';
 const bunny = 'assets/images/bunny.png';
+const avatar1 = 'assets/images/avatar1.png';
+const avatar2 = 'assets/images/avatar2.png';
+const avatar3 = 'assets/images/avatar3.png';
+const avatar4 = 'assets/images/avatar4.png';
+const avatar5 = 'assets/images/avatar5.png';
 
 
 

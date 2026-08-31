@@ -1,9 +1,9 @@
-// data/remote/dto/tts_payload_dto.dart
 import 'package:json_annotation/json_annotation.dart';
+import 'package:stela_mobile/features/library/domain/models/tts_payload.dart';
 
 part 'tts_payload_dto.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class TtsPayloadDto {
   final String text;
 
@@ -15,9 +15,15 @@ class TtsPayloadDto {
 
   const TtsPayloadDto({
     required this.text,
-    this.modelId = 'eleven_turbo_v2_5', // best for interactive story playback
+    this.modelId = 'eleven_turbo_v2_5',
     this.voiceSettings = const VoiceSettingsDto(),
   });
+
+  factory TtsPayloadDto.fromDomain(TtsPayload payload) => TtsPayloadDto(
+        text: payload.text,
+        modelId: payload.modelId,
+        voiceSettings: VoiceSettingsDto.fromDomain(payload.voiceSettings),
+      );
 
   factory TtsPayloadDto.fromJson(Map<String, dynamic> json) =>
       _$TtsPayloadDtoFromJson(json);
@@ -40,6 +46,14 @@ class VoiceSettingsDto {
     this.style = 0.3,
     this.useSpeakerBoost = true,
   });
+
+  factory VoiceSettingsDto.fromDomain(VoiceSettings settings) =>
+      VoiceSettingsDto(
+        stability: settings.stability,
+        similarityBoost: settings.similarityBoost,
+        style: settings.style,
+        useSpeakerBoost: settings.useSpeakerBoost,
+      );
 
   factory VoiceSettingsDto.fromJson(Map<String, dynamic> json) =>
       _$VoiceSettingsDtoFromJson(json);

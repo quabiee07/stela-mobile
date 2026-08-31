@@ -1,0 +1,13 @@
+---
+description: BLoC migration rules when editing presentation managers
+globs: lib/**/presentation/manager/**/*.dart
+alwaysApply: false
+---
+
+# Presentation managers
+
+- New files: `*_cubit.dart` / `*_bloc.dart` only. Do not create `*_provider.dart` with `ChangeNotifier`.
+- When editing an existing `*Provider`, migrate it to a Cubit in the same change when the edit is non-trivial.
+- States: immutable / Equatable (or freezed). Side effects (nav, snackbars): dedicated effect stream or `BlocListener`, not widget-held `StreamController` hacks in the UI.
+- Inject `AuthRepository` / use cases via constructor or `getIt` in the Cubit constructor — never `FirebaseFirestore`, `Dio`, or Retrofit clients.
+- Template: `lib/features/auth/presentation/manager/auth_cubit.dart` + `CubitScaffold`.

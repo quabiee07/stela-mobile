@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
+import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/core/presentation/widgets/inputfield_state.dart';
-import 'package:stela_mobile/core/presentation/widgets/svg_image.dart';
 
 class InputField extends TextFieldParent {
   const InputField({
@@ -115,12 +116,10 @@ class _InputFieldState extends TextFieldState<InputField> {
                   onPressed: () {
                     controller.clear();
                   },
-                  child: SvgImage(
-                    asset: '',
-                    width: 24,
-                    height: 24,
+                  child: AppIcon(
+                    AppIcons.close,
+                    size: 20,
                     color: theme.colorScheme.onSurface.withValues(alpha: .7),
-                    fit: BoxFit.scaleDown,
                   ),
                 )
               : widget.suffix,

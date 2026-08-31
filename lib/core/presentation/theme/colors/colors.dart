@@ -1,22 +1,21 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
+/// Stela brand + light neutrals
 const buttonColor = Color(0xFF1e1e1e);
 const disabledButton = Color(0xFF1e1e1e);
 const textColorLight = Color(0xFF0D0D0D);
-const textColorDark = Color(0xFF0D0D0D);
-const textGreyDark = Color(0xFF1e1e1e);
+const textColorDark = Color(0xFFFFFFFF);
+const textGreyDark = Color(0xFFA0A0A0);
 const textGrey = Color(0xFF515152);
 const dividerGrey = Color(0xFFE4E7EC);
 const cardGrey = Color(0xFFF9F9F9);
 const disabledGrey = Color(0xFFF0F1F2);
 const borderColor = Color(0xFFEDEFF1);
-const cardBackgroundDark = Color(0xFF1e1e1e);
-const cardBackgroundLight = Color(0xFF1e1e1e);
+const cardBackgroundDark = Color(0xFF1E1E1E);
+const cardBackgroundLight = Color(0xFFF8FAFC);
 const cardBackgorund = Color.fromARGB(255, 219, 227, 243);
 const profileBrown = Color(0xFF1e1e1e);
-const walletTopDark = Color(0xFF1e1e1e);
+const walletTopDark = Color(0xFF1E1E1E);
 const walletTopLight = Color(0xFF1e1e1e);
 
 const primaryColor = Color(0xFF49B76F);
@@ -44,12 +43,21 @@ const grey300 = Color(0xFFE2E8F0);
 const grey400 = Color(0xFFCAD5E2);
 const grey500 = Color(0xFF90A1B9);
 
+/// Dark mode palette (from product mock)
+const darkBackground = Color(0xFF121212);
+const darkSurface = Color(0xFF1E1E1E);
+const darkSurfaceElevated = Color(0xFF252525);
+const darkChip = Color(0xFF2A2A2A);
+const darkBorder = Color(0xFF3A3A3A);
+const darkMuted = Color(0xFFA0A0A0);
+const darkOnSurface = Color(0xFFFFFFFF);
+
 // Neutral Colors (from Figma)
 const neutral5 = Color(0xFFF9FAFB);
-const neutral50 = Color(0xFFF9FAFB); // Added neutral50
+const neutral50 = Color(0xFFF9FAFB);
 const neutral100 = Color(0xFFF3F4F6);
-const neutral200 = Color(0xFFE5E7EB); // ✅ NEW
-const neutral300 = Color(0xFFD1D5DB); // ✅ NEW
+const neutral200 = Color(0xFFE5E7EB);
+const neutral300 = Color(0xFFD1D5DB);
 const neutral400 = Color(0xFF9CA3AF);
 const neutral500 = Color(0xFF6B7280);
 const neutral600 = Color(0xFF535862);
@@ -85,6 +93,10 @@ const error500 = Color(0xFFF04438);
 const error600 = Color(0xFFD92D20);
 const error700 = Color(0xFFB42318);
 
+//app colors
+const appBackground = Color(0xFFF5F5F5);
+const appBackgroundDark = Color(0xFF1E1E1E);
+const appBackgroundLight = Color(0xFFF5F5F5);
 const stelaGradient = LinearGradient(
   begin: Alignment.topCenter,
   end: Alignment.bottomCenter,
@@ -112,6 +124,11 @@ const greyGradient = LinearGradient(
   begin: Alignment.topCenter,
   end: Alignment.bottomCenter,
   colors: [grey100, grey100],
+);
+const darkChipGradient = LinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: [darkChip, darkChip],
 );
 const categoryGradient = LinearGradient(
   begin: Alignment.topLeft,

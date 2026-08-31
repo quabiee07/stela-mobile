@@ -1,36 +1,112 @@
-// import 'package:stela_mobile/core/domain/utils/utilities.dart';
+import 'dart:io';
 
-// class NotificationService {
-//   static final NotificationService _instance = NotificationService._internal();
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:stela_mobile/core/domain/utils/constants.dart';
+import 'package:timezone/data/latest.dart';
+import 'package:timezone/timezone.dart';
 
-//   factory NotificationService() {
-//     return _instance;
-//   }
+class NotificationService {
+  late final FirebaseMessaging _firebaseMessaging;
+  static final NotificationService _instance = NotificationService._internal();
 
-//   NotificationService._internal();
+  factory NotificationService() {
+    return _instance;
+  }
 
-//   Future<void> init() async {
-//     // TODO: Initialize FlutterLocalNotificationsPlugin or FirebaseMessaging here
-//     logg('NotificationService initialized');
-//   }
+  NotificationService._internal();
 
-//   Future<void> scheduleDailyReminder() async {
-//     // TODO: Implement "Hey [Name], don't break your streak! Your book is waiting 📖"
-//     logg('Scheduled daily reminder');
-//   }
+  Future<void> setupAPNS() async {
+    String? apnsToken = await _firebaseMessaging.getAPNSToken();
+    int attempts = 0;
+    while (apnsToken == null && attempts < 10) {
+      // 5 → 10
+      await Future.delayed(const Duration(seconds: 2)); // 1s → 2s
+      apnsToken = await _firebaseMessaging.getAPNSToken();
+      attempts++;
+      debugPrint(
+        "APNS attempt $attempts: ${apnsToken != null ? '✅ resolved' : '⏳ null'}",
+      );
+    }
+    if (apnsToken == null) {
+      debugPrint("⚠️ APNS token still null after $attempts attempts");
+    }
+  }
 
-//   Future<void> sendStreakAtRiskWarning(int streakDays) async {
-//     // TODO: Implement "You haven't read today. Your [X]-day streak is on the line!"
-//     logg('Sent streak at risk warning for $streakDays days');
-//   }
+  Future<String?> getToken() async {
+    try {
+      if (!Platform.isAndroid) {
+        final iosInfo = await DeviceInfoPlugin().iosInfo;
+        if (!iosInfo.isPhysicalDevice) {
+          fcmToken = "simulator_dummy_token";
+          return fcmToken;
+        }
+        await setupAPNS();
 
-//   Future<void> sendMilestoneReached(int streakDays) async {
-//     // TODO: Implement "You hit a [X]-day streak on Stela! Share it and earn XP 🏆"
-//     logg('Sent milestone reached for $streakDays days');
-//   }
+        // Don't proceed if APNS never resolved
+        if (await _firebaseMessaging.getAPNSToken() == null) {
+          debugPrint("❌ Aborting getToken — APNS unavailable");
+          return null;
+        }
+      }
+      fcmToken = await _firebaseMessaging.getToken();
+      return fcmToken;
+    } on IOException catch (e) {
+      debugPrint(
+        "Error getting FCM token: $e. Device info: ${await DeviceInfoPlugin().deviceInfo}",
+      );
+      return null;
+    } catch (e) {
+      debugPrint("Unexpected error getting FCM token: $e");
+      return null;
+    }
+  }
 
-//   Future<void> cancelAllNotifications() async {
-//     // TODO: Clear scheduled notifications
-//     logg('Cancelled all notifications');
-//   }
-// }
+  // Future<String?> getToken() async {
+  //   try {
+  //     if (!Platform.isAndroid) {
+  //       final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+  //       final iosInfo = await deviceInfo.iosInfo;
+  //       if (!iosInfo.isPhysicalDevice) {
+  //         fcmToken = "simulator_dummy_token";
+  //         return fcmToken;
+  //       }
+  //       await setupAPNS();
+  //     }
+  //     fcmToken = await _firebaseMessaging.getToken();
+  //     return fcmToken;
+  //   } on IOException catch (e) {
+  //     debugPrint(
+  //       "Error getting FCM token: $e. Device info: ${await DeviceInfoPlugin().deviceInfo}",
+  //     );
+  //     return null;
+  //   } catch (e) {
+  //     debugPrint("Unexpected error getting FCM token: $e");
+  //     return null;
+  //   }
+  // }
+
+  Future<void> init() async {
+    TimezoneInfo currentTimeZone = await FlutterTimezone.getLocalTimezone();
+    _firebaseMessaging = FirebaseMessaging.instance;
+
+    initializeTimeZones();
+    region = currentTimeZone.identifier;
+    setLocalLocation(getLocation(currentTimeZone.identifier));
+
+    final settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      await getToken();
+    }
+  }
+}

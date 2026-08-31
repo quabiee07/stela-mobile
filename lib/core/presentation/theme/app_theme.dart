@@ -9,38 +9,41 @@ mixin AppTheme {
       colorScheme: const ColorScheme.light(
         surface: Colors.white,
         onSurface: textColorLight,
+        onSurfaceVariant: grey500,
         tertiary: primaryColor,
         secondary: cardBackgorund,
         onSecondary: Color(0xFF777777),
         onSecondaryContainer: Color(0xFFF9F9F9),
+        surfaceContainerHighest: grey100,
+        outline: grey300,
       ),
     ).copyWith(
+      brightness: Brightness.light,
       scaffoldBackgroundColor: Colors.white,
       dividerColor: const Color(0xFFE5E5E5),
-      primaryColor: _buttonLightColor,
+      primaryColor: orange,
       splashFactory: NoSplash.splashFactory,
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: _buttonLightColor,
+        backgroundColor: orange,
         foregroundColor: Colors.white,
         elevation: 2,
       ),
-      appBarTheme: AppBarTheme(
-        foregroundColor: Colors.white,
+      appBarTheme: const AppBarTheme(
+        foregroundColor: textColorLight,
         backgroundColor: Colors.white,
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFFF9F9F9),
+        color: grey100,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        prefixIconConstraints: BoxConstraints(minWidth: 20, minHeight: 20),
-
+        prefixIconConstraints: const BoxConstraints(minWidth: 20, minHeight: 20),
         hintStyle: const TextStyle(
-          color: textColorLight,
+          color: grey500,
           fontFamily: 'SFProRounded',
           fontWeight: FontWeight.w300,
           fontSize: 14,
@@ -97,30 +100,43 @@ mixin AppTheme {
   ThemeData darkTheme() {
     return ThemeData.from(
       colorScheme: const ColorScheme.dark(
-        surface: Color(0xff010101),
-        onSurface: textColorDark,
-        tertiary: primaryColor,
-        secondary: walletTopDark,
+        surface: darkSurface,
+        onSurface: darkOnSurface,
+        onSurfaceVariant: darkMuted,
+        tertiary: orange,
+        secondary: darkSurfaceElevated,
+        onSecondary: darkMuted,
+        onSecondaryContainer: darkChip,
+        surfaceContainerHighest: darkSurfaceElevated,
+        outline: darkBorder,
+        primary: orange,
       ),
     ).copyWith(
-      scaffoldBackgroundColor: const Color(0xff010101),
-      primaryColor: _buttonDarkColor,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: darkBackground,
+      dividerColor: darkBorder,
+      primaryColor: orange,
       splashFactory: NoSplash.splashFactory,
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: _buttonDarkColor,
+        backgroundColor: orange,
         foregroundColor: Colors.white,
         elevation: 2,
       ),
+      appBarTheme: const AppBarTheme(
+        foregroundColor: darkOnSurface,
+        backgroundColor: darkBackground,
+        elevation: 0,
+      ),
       cardTheme: CardThemeData(
-        color: cardBackgroundDark,
+        color: darkSurface,
         surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shadowColor: Colors.black,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         hintStyle: const TextStyle(
-          color: Color(0xFF959595),
+          color: darkMuted,
           fontFamily: 'SFProRounded',
           fontSize: 14,
         ),
@@ -129,7 +145,7 @@ mixin AppTheme {
           horizontal: 12,
         ),
         filled: true,
-        fillColor: cardBackgroundDark,
+        fillColor: darkSurface,
         errorStyle: const TextStyle(
           color: errorForeground,
           fontFamily: 'SFProRounded',
@@ -143,34 +159,31 @@ mixin AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _buttonDarkColor,
-          disabledBackgroundColor: Colors.grey,
+          backgroundColor: orange,
+          disabledBackgroundColor: darkChip,
           minimumSize: const Size(double.infinity, double.infinity),
           foregroundColor: Colors.white,
-          shadowColor: buttonColor.withValues(alpha: 0.05),
+          shadowColor: Colors.black.withValues(alpha: 0.2),
           textStyle: const TextStyle(
             fontFamily: 'SFProRounded',
             fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: textColorDark,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
           splashFactory: NoSplash.splashFactory,
           shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(50)),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
       ),
       textSelectionTheme: TextSelectionThemeData(
-        cursorColor: textColorDark,
-        selectionColor: textColorDark.withValues(alpha: 0.5),
-        selectionHandleColor: textColorDark.withValues(alpha: 0.7),
+        cursorColor: darkOnSurface,
+        selectionColor: orange.withValues(alpha: 0.35),
+        selectionHandleColor: orange,
       ),
       textTheme: MyTextTheme.darkTextTheme,
     );
   }
-
-  static const _buttonLightColor = Color(0xFF000000);
-  static const _buttonDarkColor = Color(0xFFFFFFFF);
 
   static final _inputBorderLight = OutlineInputBorder(
     borderRadius: BorderRadius.circular(14),
@@ -178,7 +191,7 @@ mixin AppTheme {
   );
 
   static final _inputBorderDark = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(8),
+    borderRadius: BorderRadius.circular(14),
     borderSide: BorderSide.none,
   );
 }

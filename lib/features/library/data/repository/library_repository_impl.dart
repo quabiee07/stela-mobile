@@ -1,30 +1,34 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:injectable/injectable.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/domain/api_response/api_result.dart';
 import 'package:stela_mobile/features/library/data/dto/tts_payload_dto.dart';
 import 'package:stela_mobile/features/library/data/services/elevenlabs_tts_service.dart';
+import 'package:stela_mobile/features/library/data/services/tts_audio_cache.dart';
+import 'package:stela_mobile/features/library/domain/models/synthesized_audio.dart';
+import 'package:stela_mobile/features/library/domain/models/tts_payload.dart';
 import 'package:stela_mobile/features/library/domain/models/voices.dart';
 import 'package:stela_mobile/features/library/domain/repository/library_repository.dart';
 
 @LazySingleton(as: LibraryRepository)
 class LibraryRepositoryImpl implements LibraryRepository {
-  final ttsService = getIt.get<ElevenLabsTtsService>();
-  final _pref = getIt.getAsync<SharedPreferences>();
+  static const _modelId = 'eleven_turbo_v2_5';
 
-  String _cacheKey(String text, String voiceId) =>
-      'tts_${voiceId}_${text.hashCode}';
+  final _elevenLabsTtsService = getIt.get<ElevenLabsTtsService>();
+  final _audioCache = getIt.get<TtsAudioCache>();
+
+  String get _apiKey {
+    final key = dotenv.env['ELEVENLABS_API_KEY'];
+    if (key == null || key.trim().isEmpty) {
+      throw Exception('ELEVENLABS_API_KEY is missing from assets/env/.env');
+    }
+    return key.trim();
+  }
 
   @override
   Future<ApiResult<List<VoiceModel>>> getAvailableVoices() async {
     try {
-      final result = await ttsService.getVoices(
-        apiKey: dotenv.env['ELEVENLABS_API_KEY']!,
-      );
+      final result = await _elevenLabsTtsService.getVoices(apiKey: _apiKey);
       return ApiResult.success(result.voices.map((e) => e.toDomain()).toList());
     } catch (e) {
       return ApiResult.failure(e);
@@ -32,24 +36,46 @@ class LibraryRepositoryImpl implements LibraryRepository {
   }
 
   @override
-  Future<ApiResult<Uint8List>> synthesize(String voiceId, String text) async {
+  Future<ApiResult<SynthesizedAudio>> synthesize(
+    String text,
+    String voiceId,
+  ) async {
     try {
-      final pref = await _pref;
-      final key = _cacheKey(text, voiceId);
-      final cached = pref.getString(key);
-
+      final cached = await _audioCache.read(
+        text: text,
+        voiceId: voiceId,
+        modelId: _modelId,
+      );
       if (cached != null) {
-        return ApiResult.success(base64Decode(cached));
+        return ApiResult.success(cached);
       }
 
-      final result = await ttsService.synthesize(
-        apiKey: dotenv.get('ELEVENLABS_API_KEY'),
-        voiceId: voiceId,
-        payload: TtsPayloadDto(text: text, modelId: "eleven_turbo_v2_5"),
+      final payload = TtsPayloadDto.fromDomain(
+        TtsPayload(text: text, modelId: _modelId),
       );
-      
-      await pref.setString(key, base64Encode(result));
-      return ApiResult.success(result);
+      final response = await _elevenLabsTtsService.synthesizeWithTimestamps(
+        apiKey: _apiKey,
+        voiceId: voiceId,
+        payload: payload,
+      );
+      final audio = response.toDomain();
+
+      if (audio.bytes.isEmpty) {
+        throw Exception('ElevenLabs returned empty audio.');
+      }
+
+      try {
+        await _audioCache.write(
+          text: text,
+          voiceId: voiceId,
+          modelId: _modelId,
+          audio: audio,
+        );
+      } catch (_) {
+        // Ignore cache save errors
+      }
+
+      return ApiResult.success(audio);
     } catch (e) {
       return ApiResult.failure(e);
     }

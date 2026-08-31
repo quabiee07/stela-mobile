@@ -43,7 +43,8 @@ class ProviderWidget<T extends CustomProvider> extends StatelessWidget {
         child: Consumer<T>(builder: (_, provider, _) {
           return Scaffold(
             resizeToAvoidBottomInset: resizeInsets,
-            backgroundColor: backgroundColor,
+            backgroundColor:
+                backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
             body: SafeArea(
               bottom: false,
               child: Padding(

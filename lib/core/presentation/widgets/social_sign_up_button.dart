@@ -24,13 +24,13 @@ class SocialSignUpButton extends StatelessWidget {
     final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(100),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
         height: 56,
         width: double.infinity,
         decoration: BoxDecoration(
           color: color ?? theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(100),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: isLoading == true
             ? Center(

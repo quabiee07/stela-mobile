@@ -1,198 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
-import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
+import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
+import 'package:stela_mobile/features/profile/presentation/manager/reading_preferences_cubit.dart';
 
-class TextSizeIndicator extends StatefulWidget {
+class TextSizeIndicator extends StatelessWidget {
   const TextSizeIndicator({super.key});
 
   @override
-  State<TextSizeIndicator> createState() => _TextSizeIndicatorState();
-}
-
-class _TextSizeIndicatorState extends State<TextSizeIndicator> {
-
-  double _value = 0.5;
-
-  // // Snap to named presets (optional – comment out to get a free slider)
-  // static const List<({double size, String label})> _presets = [
-  //   (size: 12, label: 'XS'),
-  //   (size: 15, label: 'S'),
-  //   (size: 18, label: 'M'),
-  //   (size: 24, label: 'L'),
-  //   (size: 30, label: 'XL'),
-  //   (size: 36, label: 'XXL'),
-  // ];
-
-  @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Row(
-        children: [
-          Spacer(),
-          const Text(
-            'bell',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF9BA5B7),
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const Gap(5),
-          Expanded(
-            flex: 3,
-            child: DoubleDividerSlider(
-              value: _value,
-              onChanged: (v) => setState(() {
-                _value = v;
-                logg('$v');
-              }),
-            ),
-          ),
+    final muted = context.mutedText;
 
-          const Gap(5),
-          const Text(
-            'Bell',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF9BA5B7),
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Slider row ───────────────────────────────────────────────────────────────
-
-class SliderRow extends StatelessWidget {
-  const SliderRow({
-    super.key,
-    required this.fontSize,
-    required this.minSize,
-    required this.maxSize,
-    required this.onChanged,
-  });
-
-  final double fontSize;
-  final double minSize;
-  final double maxSize;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Spacer(),
-        Text(
-          'aa',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey.shade400,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 3,
-              activeTrackColor: const Color(0xFFF4A8A8),
-              inactiveTrackColor: const Color(0xFFF0EEEE),
-              thumbColor: Colors.white,
-              thumbShape: _BorderedThumbShape(
-                thumbRadius: 10,
-                borderColor: const Color(0xFFD87070),
-                borderWidth: 2,
+    return BlocBuilder<ReadingPreferencesCubit, ReadingPreferencesState>(
+      buildWhen: (prev, curr) => prev.textSizeScale != curr.textSizeScale,
+      builder: (context, state) {
+        return SizedBox(
+          width: 160,
+          child: Row(
+            children: [
+              Text(
+                'aa',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: muted,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
-              overlayColor: const Color(0x1AD87070),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
-            ),
-            child: Slider(
-              value: fontSize,
-              min: minSize,
-              max: maxSize,
-
-              divisions: ((maxSize - minSize)).round(),
-              onChanged: onChanged,
-            ),
+              const Gap(6),
+              Expanded(
+                child: DoubleDividerSlider(
+                  value: state.textSizeScale,
+                  onChanged: (v) => context
+                      .read<ReadingPreferencesCubit>()
+                      .setTextSizeScale(v),
+                ),
+              ),
+              const Gap(6),
+              Text(
+                'AA',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: muted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-        ),
-        Text(
-          'AA',
-          style: TextStyle(
-            fontSize: 20,
-            color: Colors.grey.shade500,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
-
-// ─── Custom thumb shape ───────────────────────────────────────────────────────
-
-class _BorderedThumbShape extends SliderComponentShape {
-  const _BorderedThumbShape({
-    required this.thumbRadius,
-    required this.borderColor,
-    required this.borderWidth,
-  });
-
-  final double thumbRadius;
-  final Color borderColor;
-  final double borderWidth;
-
-  @override
-  Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
-      Size.fromRadius(thumbRadius);
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset center, {
-    required Animation<double> activationAnimation,
-    required Animation<double> enableAnimation,
-    required bool isDiscrete,
-    required TextPainter labelPainter,
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required TextDirection textDirection,
-    required double value,
-    required double textScaleFactor,
-    required Size sizeWithOverflow,
-  }) {
-    final canvas = context.canvas;
-
-    // Shadow
-    canvas.drawCircle(
-      center + const Offset(0, 1),
-      thumbRadius,
-      Paint()
-        ..color = Colors.black.withOpacity(0.12)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-
-    // White fill
-    canvas.drawCircle(center, thumbRadius, Paint()..color = Colors.white);
-
-    // Border
-    canvas.drawCircle(
-      center,
-      thumbRadius - borderWidth / 2,
-      Paint()
-        ..color = borderColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = borderWidth,
-    );
-  }
-}
-
-// ─── Preset row ───────────────────────────────────────────────────────────────
-
-// ─── Custom Slider with double-line divider thumb ─────────────────────────────
 
 class DoubleDividerSlider extends StatelessWidget {
   const DoubleDividerSlider({
@@ -247,7 +105,6 @@ class _SliderPainter extends CustomPainter {
     final trackRight = size.width - _dotRadius;
     final thumbX = trackLeft + value * (trackRight - trackLeft);
 
-    // ── Full pink track ──────────────────────────────────────────────────────
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(
@@ -261,21 +118,18 @@ class _SliderPainter extends CustomPainter {
       Paint()..color = _trackColor,
     );
 
-    // ── Left endpoint dot ────────────────────────────────────────────────────
     canvas.drawCircle(
       Offset(trackLeft, cy),
       _dotRadius,
       Paint()..color = _dotColor,
     );
 
-    // ── Right endpoint dot ───────────────────────────────────────────────────
     canvas.drawCircle(
       Offset(trackRight, cy),
       _dotRadius,
       Paint()..color = _dotColor,
     );
 
-    // ── Double-line thumb ────────────────────────────────────────────────────
     final divPaint = Paint()
       ..color = _dividerColor
       ..strokeWidth = _dividerWidth

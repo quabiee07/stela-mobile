@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:gif_view/gif_view.dart';
-import 'package:provider/provider.dart';
 import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/utils/custom_state.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
+import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/features/auth/domain/models/story_type.dart';
-import 'package:stela_mobile/features/auth/presentation/manager/auth_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stela_mobile/features/auth/presentation/manager/setup_cubit.dart';
 
 class StoryTypePage extends StatefulWidget {
   const StoryTypePage({super.key});
@@ -24,27 +24,25 @@ class _StoryTypePageState extends CustomState<StoryTypePage> {
       child: Column(
         children: [
           const Gap(20),
-          GifView.asset(ageGif, height: 150, width: 102, frameRate: 60),
+          CustomImage(asset: mascot3, height: 150, width: 95),
           const Gap(8),
           Text(
             "Favourite story types",
             style: theme.textTheme.bodyLarge?.copyWith(fontSize: 24),
           ),
           const Gap(36),
-          Consumer<AuthProvider>(
-            builder: (context, provider, _) {
+          BlocBuilder<SetupCubit, SetupState>(
+            builder: (context, state) {
               final List<Widget> chips = [];
 
               for (int i = 0; i < StoryType.storyTypes.length; i++) {
                 final type = StoryType.storyTypes[i];
-                final isSelected = provider.state.selectedStoryTypes.contains(
-                  type,
-                );
+                final isSelected = state.selectedStoryTypes.contains(type);
 
                 chips.add(
                   Clickable(
                     onPressed: () {
-                      provider.toggleStoryType(type);
+                      context.read<SetupCubit>().toggleStoryType(type);
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -53,9 +51,9 @@ class _StoryTypePageState extends CustomState<StoryTypePage> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected ? orange : Colors.white,
+                        color: isSelected ? orange : theme.colorScheme.surfaceContainer,
                         border: Border.all(
-                          color: isSelected ? orange : grey300,
+                          color: isSelected ? orange : theme.colorScheme.outline,
                         ),
                         borderRadius: BorderRadius.circular(50),
                       ),

@@ -1,18 +1,25 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:stela_mobile/core/presentation/resources/drawables.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
+import 'package:stela_mobile/core/presentation/manager/theme_provider.dart';
+import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
+import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
 import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
+import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
 import 'package:stela_mobile/core/presentation/widgets/button.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
+import 'package:stela_mobile/core/presentation/widgets/cubit_scaffold.dart';
 import 'package:stela_mobile/core/presentation/widgets/pop_widget.dart';
-import 'package:stela_mobile/core/presentation/widgets/provider_widget.dart';
-import 'package:stela_mobile/core/presentation/widgets/svg_image.dart';
-import 'package:stela_mobile/features/profile/presentation/manager/profile_provider.dart';
+import 'package:stela_mobile/features/profile/presentation/manager/gamification_cubit.dart';
+import 'package:stela_mobile/features/profile/presentation/manager/profile_cubit.dart';
+import 'package:stela_mobile/features/profile/presentation/manager/settings_cubit.dart';
 import 'package:stela_mobile/features/profile/presentation/widgets/settings_card.dart';
 import 'package:stela_mobile/features/profile/presentation/widgets/text_size_indicator.dart';
 import 'package:stela_mobile/features/profile/presentation/widgets/text_speed_indicator.dart';
+import 'package:stela_mobile/features/library/presentation/widgets/voice_picker_panel.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,20 +29,15 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  ProfileProvider? _provider;
   bool _audioOn = false;
-  bool _readingReminder = false;
-  bool _streakFreeze = false;
-  bool _lightMode = false;
 
   @override
   Widget build(BuildContext context) {
-    return ProviderWidget(
-      provider: ProfileProvider(),
-      children: (provider, theme) {
-        _provider ??= provider;
-        // final state = provider.state;
+    final themeProvider = context.watch<ThemeProvider>();
 
+    return CubitScaffold<SettingsCubit, SettingsState>(
+      create: (_) => createSettingsCubit(),
+      children: (context, cubit, state, theme) {
         return [
           Expanded(
             child: SingleChildScrollView(
@@ -65,33 +67,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      color: grey100,
+                      color: context.cardSurface,
                     ),
                     child: Column(
                       spacing: 8,
                       children: [
                         SettingsCard(
-                          icon: text,
+                          icon: AppIcons.text,
                           title: 'Text Speed',
                           trailing: TextSpeedIndicator(),
                         ),
-                        const Divider(
+                        Divider(
                           thickness: .6,
                           height: .6,
-                          color: greyDivider,
+                          color: context.divider,
                         ),
                         SettingsCard(
-                          icon: text,
+                          icon: AppIcons.text,
                           title: 'Text Size',
                           trailing: TextSizeIndicator(),
                         ),
-                        const Divider(
+                        Divider(
                           thickness: .6,
                           height: .6,
-                          color: greyDivider,
+                          color: context.divider,
                         ),
                         SettingsCard(
-                          icon: voice,
+                          icon: AppIcons.voice,
+                          title: 'Narrator Voice',
+                          trailing: Clickable(
+                            onPressed: () => showVoicePickerSheet(context),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Choose',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const AppIcon(AppIcons.arrowRight, size: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Divider(
+                          thickness: .6,
+                          height: .6,
+                          color: context.divider,
+                        ),
+                        SettingsCard(
+                          icon: AppIcons.voice,
                           title: 'Audio On',
                           trailing: CupertinoSwitch(
                             value: _audioOn,
@@ -104,70 +130,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             },
                           ),
                         ),
-                        const Divider(
+                        Divider(
                           thickness: .6,
                           height: .6,
-                          color: greyDivider,
+                          color: context.divider,
                         ),
                         SettingsCard(
-                          icon: notification,
+                          icon: AppIcons.notification,
                           title: 'Reading Reminder',
                           trailing: CupertinoSwitch(
-                            value: _readingReminder,
+                            value: state.isReminderEnabled,
                             activeTrackColor: orange,
                             inactiveTrackColor: grey400,
                             onChanged: (value) {
-                              setState(() {
-                                _readingReminder = value;
-                              });
+                              cubit.setDailyReminderValue(value);
                             },
                           ),
                         ),
-                        const Divider(
+                        if (state.isReminderEnabled) ...[
+                          Divider(
+                            thickness: .6,
+                            height: .6,
+                            color: context.divider,
+                          ),
+                          SettingsCard(
+                            icon: AppIcons.notification,
+                            title: 'Reminder time',
+                            trailing: Clickable(
+                              onPressed: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: TimeOfDay(
+                                    hour: state.reminderHour,
+                                    minute: 0,
+                                  ),
+                                );
+                                if (picked != null) {
+                                  await cubit.setReminderHour(picked.hour);
+                                }
+                              },
+                              child: Text(
+                                TimeOfDay(
+                                  hour: state.reminderHour,
+                                  minute: 0,
+                                ).format(context),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: orange,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        Divider(
                           thickness: .6,
                           height: .6,
-                          color: greyDivider,
+                          color: context.divider,
                         ),
                         SettingsCard(
-                          icon: zap,
+                          icon: AppIcons.flash,
                           title: 'Streak Freeze',
                           trailing: CupertinoSwitch(
-                            value: _streakFreeze,
+                            value: state.streakFreezeActivated,
                             activeTrackColor: orange,
                             inactiveTrackColor: grey400,
-                            onChanged: (value) {
-                              setState(() {
-                                _streakFreeze = value;
-                              });
+                            onChanged: (value) async {
+                              await cubit.activateStreakFreeze(value);
+                              if (value && context.mounted) {
+                                await context
+                                    .read<GamificationCubit>()
+                                    .loadGamification();
+                              }
                             },
                           ),
                         ),
-                        const Divider(
+                        Divider(
                           thickness: .6,
                           height: .6,
-                          color: greyDivider,
+                          color: context.divider,
                         ),
                         SettingsCard(
-                          icon: sun,
-                          title: 'Light Mode',
+                          icon: themeProvider.isDark
+                              ? AppIcons.moon
+                              : AppIcons.sun,
+                          title: themeProvider.isDark
+                              ? 'Dark Mode'
+                              : 'Light Mode',
                           trailing: CupertinoSwitch(
-                            value: _lightMode,
+                            value: !themeProvider.isDark,
                             activeTrackColor: orange,
                             inactiveTrackColor: grey400,
-                            onChanged: (value) {
-                              setState(() {
-                                _lightMode = value;
-                              });
-                            },
+                            onChanged: themeProvider.setLightMode,
                           ),
                         ),
-                        const Divider(
+                        Divider(
                           thickness: .6,
                           height: .6,
-                          color: greyDivider,
+                          color: context.divider,
                         ),
                         SettingsCard(
-                          icon: global,
+                          icon: AppIcons.global,
                           title: 'Language',
                           trailing: Clickable(
                             onPressed: () {
@@ -182,11 +245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
-                                SvgImage(
-                                  asset: arrowRight,
-                                  height: 20,
-                                  width: 20,
-                                ),
+                                AppIcon(AppIcons.arrowRight, size: 20),
                               ],
                             ),
                           ),
@@ -199,7 +258,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      color: grey100,
+                      color: context.cardSurface,
                     ),
                     child: Clickable(
                       onPressed: () {
@@ -211,117 +270,137 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               top: Radius.circular(12),
                             ),
                           ),
-                          builder: (context) {
-                            return Padding(
-                              padding: MediaQuery.of(context).viewInsets,
-                              child: IntrinsicHeight(
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.surface,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Center(
-                                        child: Container(
-                                          width: 50,
-                                          height: 5,
-                                          decoration: BoxDecoration(
-                                            color: theme.colorScheme.onSurface,
-                                            borderRadius: BorderRadius.circular(
-                                              150,
-                                            ),
-                                          ),
+                          builder: (sheetContext) {
+                            return BlocProvider(
+                              create: (_) => createProfileCubit(),
+                              child: BlocBuilder<ProfileCubit, AccountState>(
+                                builder: (profileContext, profileState) {
+                                  return Padding(
+                                    padding: MediaQuery.of(context).viewInsets,
+                                    child: IntrinsicHeight(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.surface,
                                         ),
-                                      ),
-                                      const Gap(16),
-                                      Center(
-                                        child: Text(
-                                          'Sign Out',
-                                          style: theme.textTheme.bodyLarge
-                                              ?.copyWith(
-                                                fontSize: 20,
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
-                                        ),
-                                      ),
-                                      const Gap(8),
-                                      Center(
-                                        child: Text(
-                                          'Are you sure you want to sign out? You can login again once you do',
-                                          textAlign: TextAlign.center,
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
-                                                fontSize: 16,
-                                                color: theme
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withOpacity(.5),
-                                              ),
-                                        ),
-                                      ),
-                                      const Gap(40),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Clickable(
-                                              onPressed: () {
-                                                context.pop();
-                                              },
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Center(
                                               child: Container(
-                                                height: 54,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 8,
-                                                      horizontal: 12,
-                                                    ),
+                                                width: 50,
+                                                height: 5,
                                                 decoration: BoxDecoration(
-                                                  color: grey200,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurface,
                                                   borderRadius:
-                                                      BorderRadius.circular(10),
+                                                      BorderRadius.circular(
+                                                        150,
+                                                      ),
                                                 ),
-                                                child: Center(
-                                                  child: Text(
-                                                    'Cancel',
-                                                    style: theme
-                                                        .textTheme
-                                                        .displayLarge
-                                                        ?.copyWith(
-                                                          fontSize: 14,
-                                                          // color: Colors.white,
+                                              ),
+                                            ),
+                                            const Gap(16),
+                                            Center(
+                                              child: Text(
+                                                'Sign Out',
+                                                style: theme.textTheme.bodyLarge
+                                                    ?.copyWith(
+                                                      fontSize: 20,
+                                                      color: theme
+                                                          .colorScheme
+                                                          .onSurface,
+                                                    ),
+                                              ),
+                                            ),
+                                            const Gap(8),
+                                            Center(
+                                              child: Text(
+                                                'Are you sure you want to sign out? You can login again once you do',
+                                                textAlign: TextAlign.center,
+                                                style: theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      fontSize: 16,
+                                                      color: theme
+                                                          .colorScheme
+                                                          .onSurface
+                                                          .withValues(alpha: .5),
+                                                    ),
+                                              ),
+                                            ),
+                                            const Gap(40),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Clickable(
+                                                    onPressed: () {
+                                                      sheetContext.pop();
+                                                    },
+                                                    child: Container(
+                                                      height: 54,
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 8,
+                                                            horizontal: 12,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: grey200,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              10,
+                                                            ),
+                                                      ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          'Cancel',
+                                                          style: theme
+                                                              .textTheme
+                                                              .displayLarge
+                                                              ?.copyWith(
+                                                                fontSize: 14,
+                                                                color: Colors.black,
+                                                              ),
                                                         ),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
+                                                const Gap(16),
+                                                Expanded(
+                                                  child: Button2(
+                                                    title: 'Sign out',
+                                                    isLoading:
+                                                        profileState.isLoggingOut,
+                                                    onPressed: () {
+                                                      // Use profileContext (under BlocProvider),
+                                                      // not sheetContext (above it).
+                                                      profileContext
+                                                          .read<ProfileCubit>()
+                                                          .clearUserSession(
+                                                            profileContext,
+                                                          );
+                                                    },
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                          const Gap(16),
-                                          Expanded(
-                                            child: Button2(
-                                              title: 'Sign out',
-                                              isLoading: provider.loading,
-                                              onPressed: () {
-                                                provider.clearUserSession(
-                                                  context,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
+                                            const Gap(10),
+                                          ],
+                                        ),
                                       ),
-                                      const Gap(10),
-                                    ],
-                                  ),
-                                ),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           },
                         );
                       },
-                      child: SettingsCard(icon: logout, title: 'Log Out'),
+                      child: SettingsCard(icon: AppIcons.logout, title: 'Log Out'),
                     ),
                   ),
                 ],

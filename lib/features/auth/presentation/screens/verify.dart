@@ -6,28 +6,27 @@ import 'package:otp_text_field_v2/otp_text_field_v2.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
 import 'package:stela_mobile/core/presentation/widgets/button.dart';
-import 'package:stela_mobile/core/presentation/widgets/provider_widget.dart';
+import 'package:stela_mobile/core/presentation/widgets/cubit_scaffold.dart';
 import 'package:stela_mobile/core/presentation/widgets/scrollable_widget.dart';
-import 'package:stela_mobile/features/auth/presentation/manager/auth_provider.dart';
+import 'package:stela_mobile/features/auth/presentation/manager/auth_cubit.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/setup_account.dart';
 
 class VerifyScreen extends StatefulWidget {
   const VerifyScreen({super.key});
-  static const String id = "/verify-screen";
+  static const String id = '/verify-screen';
+
   @override
   State<VerifyScreen> createState() => _VerifyScreenState();
 }
 
 class _VerifyScreenState extends State<VerifyScreen> {
-  AuthProvider? _provider;
   final otpFieldController = OtpFieldControllerV2();
 
   @override
   Widget build(BuildContext context) {
-    return ProviderWidget(
-      provider: AuthProvider(),
-      children: (provider, theme) {
-        _provider ??= provider;
+    return CubitScaffold<AuthCubit, AuthFormState>(
+      create: (_) => AuthCubit(),
+      children: (context, cubit, state, theme) {
         return [
           const Gap(42),
           Text('Confirm 5 Digit code', style: theme.textTheme.titleLarge),
@@ -65,10 +64,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                 fieldStyle: FieldStyle.box,
                 outlineBorderRadius: 15,
                 onChanged: (value) {},
-                onCompleted: (value) {
-                  // provider.setOtp(value);
-                  // provider.verifyOtp(email: email);
-                },
+                onCompleted: (value) {},
                 cursorColor: midGrey,
                 otpFieldStyle: OtpFieldStyle(
                   borderColor: midGrey,
@@ -111,10 +107,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
           Button2(
             title: 'Verify',
             isEnabled: true,
-            isLoading: provider.loading,
+            isLoading: state.loading,
             onPressed: () {
               context.push(const SetupAccountScreen());
-              // provider.verifyOtp(email: email);
             },
           ),
           const Gap(44),

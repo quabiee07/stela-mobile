@@ -1,51 +1,84 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
+import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
+import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/features/auth/domain/models/user_model.dart';
 
-class StreakCard extends StatefulWidget {
-  const StreakCard({super.key, required this.streakData});
+class StreakCard extends StatelessWidget {
+  const StreakCard({
+    super.key,
+    required this.streakData,
+    this.freezeAvailable = false,
+    this.isFrozen = false,
+    this.onActivateFreeze,
+  });
   final StreakDataModel? streakData;
+  final bool freezeAvailable;
+  final bool isFrozen;
+  final VoidCallback? onActivateFreeze;
 
-  @override
-  State<StreakCard> createState() => _StreakCardState();
-}
-
-class _StreakCardState extends State<StreakCard> {
   static const _barColors = [
     Color(0xFFEB4C4C),
     Color(0xFF507CE9),
     Color(0xFF9E70F2),
     Color(0xFFEA5E3E),
     Color(0xFF507CE9),
+    Color(0xFFEB4C4C),
+    Color(0xFF9E70F2),
   ];
 
-  late final List<_BarData> _barData;
+  List<_BarData> _mapBars(StreakDataModel? data) {
+    final progress = data?.weeklyProgress ?? const <WeeklyProgressModel>[];
+    if (progress.isEmpty) {
+      return [
+        for (var i = 0; i < 7; i++)
+          _BarData(
+            const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+            0,
+            _barColors[i],
+          ),
+      ];
+    }
 
-  @override
-  void initState() {
-    super.initState();
+    return [
+      for (var i = 0; i < progress.length; i++)
+        _BarData(
+          progress[i].weekLabel,
+          progress[i].value.toDouble(),
+          _barColors[i % _barColors.length],
+        ),
+    ];
+  }
 
-    final progress = widget.streakData?.weeklyProgress ?? [];
-
-    // Map over the entries to get both index and weekly progress data
-    _barData = progress.asMap().entries.map((entry) {
-      final index = entry.key;
-      final weekData = entry.value;
-      // Assign colors cyclically based on the index
-      final color = _barColors[index % _barColors.length];
-
-      return _BarData(weekData.weekLabel, weekData.value.toDouble(), color);
-    }).toList();
+  double _maxY(List<_BarData> bars) {
+    final peak = bars.fold<double>(0, (max, bar) => math.max(max, bar.value));
+    if (peak <= 0) return 50;
+    // Headroom so a full day doesn't clip the rounded top.
+    final padded = peak * 1.25;
+    if (padded <= 50) return 50;
+    if (padded <= 100) return 100;
+    if (padded <= 150) return 150;
+    return (padded / 50).ceil() * 50.0;
   }
 
   @override
   Widget build(BuildContext context) {
+    final streakDays = streakData?.currentStreakDays ?? 0;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final muted = context.mutedText;
+    final gridColor = context.softBorder;
+    final trackColor = context.softBorder.withValues(alpha: 0.45);
+    final barData = _mapBars(streakData);
+    final maxY = _maxY(barData);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
-        color: white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -59,12 +92,14 @@ class _StreakCardState extends State<StreakCard> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black,
+                  color: onSurface,
                 ),
               ),
               Text(
-                '🔥 ${widget.streakData?.currentStreakDays} day streak!',
-                style: TextStyle(
+                streakDays > 0
+                    ? '$streakDays day streak!'
+                    : 'Start a streak today',
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: orange,
@@ -72,35 +107,75 @@ class _StreakCardState extends State<StreakCard> {
               ),
             ],
           ),
+          if (freezeAvailable || isFrozen) ...[
+            const Gap(12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    isFrozen
+                        ? 'Streak freeze is active today'
+                        : 'Streak freeze ready',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: muted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (freezeAvailable && !isFrozen && onActivateFreeze != null)
+                  Clickable(
+                    onPressed: onActivateFreeze!,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: orange.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: const Text(
+                        'Use freeze',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: orange,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const Gap(20),
           SizedBox(
+            width: double.infinity,
             height: 220,
             child: BarChart(
               BarChartData(
-                maxY: 200,
+                maxY: maxY,
                 minY: 0,
+                alignment: BarChartAlignment.spaceAround,
                 barTouchData: BarTouchData(enabled: false),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 36,
-                      interval: 50,
+                      interval: maxY / 4,
                       getTitlesWidget: (value, meta) {
-                        // Only show 0, 25, 50, 100, 150, 200
-                        const labels = {0, 25, 50, 100, 150, 200};
-                        // final labels = widget.streakData?.weeklyProgress.map((e) => e.value).toSet();
-                        if (!labels.contains(value.toInt())) {
-                          return const SizedBox.shrink();
+                        if (value == 0 || value == maxY) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: muted,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          );
                         }
-                        return Text(
-                          value.toInt() == 0 ? '0' : '${value.toInt()}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF999999),
-                            fontWeight: FontWeight.w400,
-                          ),
-                        );
+                        return const SizedBox.shrink();
                       },
                     ),
                   ),
@@ -110,16 +185,16 @@ class _StreakCardState extends State<StreakCard> {
                       reservedSize: 28,
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
-                        if (index < 0 || index >= _barData.length)
+                        if (index < 0 || index >= barData.length) {
                           return const SizedBox.shrink();
-                        final label = _barData[index].label;
+                        }
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            label,
-                            style: const TextStyle(
+                            barData[index].label,
+                            style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF999999),
+                              color: muted,
                               fontWeight: FontWeight.w400,
                             ),
                           ),
@@ -137,28 +212,35 @@ class _StreakCardState extends State<StreakCard> {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  horizontalInterval: 50,
+                  horizontalInterval: maxY / 4,
                   getDrawingHorizontalLine: (_) =>
-                      FlLine(color: const Color(0xFFF0F0F0), strokeWidth: 1),
+                      FlLine(color: gridColor, strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
-                barGroups: List.generate(_barData.length, (i) {
-                  final bar = _barData[i];
-                  return BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: bar.value,
-                        color: bar.color,
-                        width: 36,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          topRight: Radius.circular(8),
+                barGroups: [
+                  for (var i = 0; i < barData.length; i++)
+                    BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          fromY: 0,
+                          toY: barData[i].value,
+                          color: barData[i].color,
+                          width: 28,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            topRight: Radius.circular(8),
+                          ),
+                          backDrawRodData: BackgroundBarChartRodData(
+                            show: true,
+                            fromY: 0,
+                            toY: maxY,
+                            color: trackColor,
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                }),
+                      ],
+                    ),
+                ],
               ),
             ),
           ),

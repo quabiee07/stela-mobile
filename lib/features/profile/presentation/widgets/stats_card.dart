@@ -1,7 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
+import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
 
 class StatsCard extends StatelessWidget {
   const StatsCard({
@@ -16,6 +15,8 @@ class StatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Expanded(
       child: Column(
         children: [
@@ -23,18 +24,18 @@ class StatsCard extends StatelessWidget {
           const Gap(6),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: onSurface,
             ),
           ),
           const Gap(2),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: grey500,
+              color: context.mutedText,
               fontWeight: FontWeight.w400,
             ),
           ),

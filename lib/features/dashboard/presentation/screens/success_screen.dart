@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
 import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
-import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/core/presentation/widgets/svg_image.dart';
@@ -111,24 +110,24 @@ class _SuccessScreenState extends State<SuccessScreen> {
                     ),
                   ),
                   const Gap(28),
-                  Clickable(
-                    onPressed: () {
-                      context.pop();
-                    },
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: Center(
-                        child: Text(
-                          "Continue",
-                          style: TextStyle(
-                            color: white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Clickable(
+                  //   onPressed: () {
+                  //     context.pop();
+                  //   },
+                  //   child: SizedBox(
+                  //     width: double.infinity,
+                  //     child: Center(
+                  //       child: Text(
+                  //         "Continue",
+                  //         style: TextStyle(
+                  //           color: white,
+                  //           fontSize: 16,
+                  //           fontWeight: FontWeight.w600,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                   const Gap(50),
                 ],
               ),

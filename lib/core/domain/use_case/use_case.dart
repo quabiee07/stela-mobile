@@ -7,3 +7,7 @@ abstract class UseCase<T, P> {
 
   Future<ApiResult<T>> invoke();
 }
+
+class NoParams {
+  const NoParams();
+}

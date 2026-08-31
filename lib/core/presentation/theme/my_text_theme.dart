@@ -70,57 +70,62 @@ class MyTextTheme {
 
   static const darkTextTheme = TextTheme(
       displayLarge: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontWeight: FontWeight.w700),
       displayMedium: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontSize: 16,
           fontWeight: FontWeight.w500),
       displaySmall: TextStyle(
-          color: textColorDark,
+          color: darkMuted,
           fontFamily: 'SFProRounded',
           fontSize: 14,
           fontWeight: FontWeight.normal),
       bodySmall: TextStyle(
-        color: textColorDark,
+        color: darkMuted,
         fontFamily: 'SFProRounded',
         fontSize: 14,
       ),
       bodyMedium: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontSize: 14,
           fontWeight: FontWeight.w500),
       bodyLarge: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontSize: 14,
           fontWeight: FontWeight.w700),
       titleLarge: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontSize: 24,
           fontWeight: FontWeight.w700),
       titleMedium: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontSize: 18,
           fontWeight: FontWeight.w500),
       titleSmall: TextStyle(
-          color: textColorDark,
+          color: darkMuted,
           fontFamily: 'SFProRounded',
           fontSize: 14,
           fontWeight: FontWeight.w300),
       labelLarge: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontSize: 16,
           fontWeight: FontWeight.w700),
       labelMedium: TextStyle(
-          color: textColorDark,
+          color: darkOnSurface,
           fontFamily: 'SFProRounded',
           fontSize: 16,
-          fontWeight: FontWeight.w500));
+          fontWeight: FontWeight.w500),
+      labelSmall: TextStyle(
+          color: darkMuted,
+          fontFamily: 'SFProRounded',
+          fontSize: 14,
+          fontWeight: FontWeight.w400));
 }

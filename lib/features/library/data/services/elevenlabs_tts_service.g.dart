@@ -22,31 +22,35 @@ class _ElevenLabsTtsService implements ElevenLabsTtsService {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<Uint8List> synthesize({
+  Future<TtsAudioResponseDto> synthesizeWithTimestamps({
     required String apiKey,
+    String accept = 'application/json',
     required String voiceId,
     required TtsPayloadDto payload,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{r'xi-api-key': apiKey};
+    final _headers = <String, dynamic>{
+      r'xi-api-key': apiKey,
+      r'Accept': accept,
+    };
     _headers.removeWhere((k, v) => v == null);
     final _data = <String, dynamic>{};
     _data.addAll(payload.toJson());
-    final _options = _setStreamType<Uint8List>(
+    final _options = _setStreamType<TtsAudioResponseDto>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            'text-to-speech/${voiceId}',
+            'text-to-speech/${voiceId}/with-timestamps',
             queryParameters: queryParameters,
             data: _data,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Uint8List>(_options);
-    late Uint8List _value;
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late TtsAudioResponseDto _value;
     try {
-      _value = _result.data!;
+      _value = TtsAudioResponseDto.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

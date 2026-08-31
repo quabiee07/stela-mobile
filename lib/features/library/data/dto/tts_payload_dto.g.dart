@@ -21,7 +21,7 @@ Map<String, dynamic> _$TtsPayloadDtoToJson(TtsPayloadDto instance) =>
     <String, dynamic>{
       'text': instance.text,
       'model_id': instance.modelId,
-      'voice_settings': instance.voiceSettings,
+      'voice_settings': instance.voiceSettings.toJson(),
     };
 
 VoiceSettingsDto _$VoiceSettingsDtoFromJson(Map<String, dynamic> json) =>

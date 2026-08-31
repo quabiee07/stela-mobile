@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
+import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
 import 'package:logger/logger.dart';
 import 'package:toastification/toastification.dart';
 
@@ -47,43 +49,43 @@ extension Snackbar on State {
 
 
 customToast(String message, [type = 1]) {
-  final IconData icon;
+  final AppIconData icon;
   final String title;
-  final Color bgColor;
-  final Color borderColor;
+  // final Color bgColor;
+  // final Color borderColor;
   final Color iconColor;
   final ToastificationType toastType;
   switch (type) {
     case 1:
-      icon = Icons.check_circle_rounded;
+      icon = AppIcons.checkCircle;
       title = "Success";
       toastType = ToastificationType.success;
-      bgColor = success50;
-      borderColor = success200;
-      iconColor = success600;
+      // bgColor = success50;
+      // borderColor = success200;
+      iconColor = success500;
       break;
     case 2:
-      icon = Icons.warning_rounded;
+      icon = AppIcons.alert;
       title = "Warning";
       toastType = ToastificationType.warning;
-      bgColor = warning50;
-      borderColor = warning100;
+      // bgColor = warning50;
+      // borderColor = warning100;
       iconColor = warning500;
       break;
     default:
-      icon = Icons.error_rounded;
+      icon = AppIcons.error;
       title = "Error";
       toastType = ToastificationType.error;
-      bgColor = error50;
-      borderColor = error400;
+      // bgColor = error50;
+      // borderColor = error400;
       iconColor = error500;
   }
 
   return toastification.show(
     type: toastType,
-    style: ToastificationStyle.minimal,
+    style: ToastificationStyle.fillColored,
     autoCloseDuration: const Duration(seconds: 5),
-    title: Text(title, style: TextStyle(color: neutral900)),
+    title: Text(title, style: TextStyle(color: white, fontSize: 16, fontWeight: FontWeight.w600)),
     description: Text(message, style: TextStyle(color: neutral600)),
     alignment: Alignment.topRight,
     direction: TextDirection.ltr,
@@ -94,11 +96,11 @@ customToast(String message, [type = 1]) {
     icon: Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: bgColor,
-        border: Border.all(color: borderColor),
-        borderRadius: BorderRadius.circular(8),
+        // color: bgColor,
+        // border: Border.all(color: borderColor),
+        // borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(icon, color: iconColor, size: 15),
+      child: AppIcon(icon, color: white, size: 24),
     ),
     showIcon: true, // show or hide the icon
     primaryColor: iconColor,
@@ -121,7 +123,7 @@ customToast(String message, [type = 1]) {
       buttonBuilder: (context, onClose) {
         return IconButton(
           onPressed: onClose,
-          icon: const Icon(Icons.close_rounded, color: neutral700),
+          icon: const AppIcon(AppIcons.close, color: neutral700, size: 18),
         );
       },
     ),
@@ -129,7 +131,7 @@ customToast(String message, [type = 1]) {
     closeOnClick: false,
     pauseOnHover: true,
     dragToClose: true,
-    applyBlurEffect: true,
+    applyBlurEffect: false,
     // callbacks: ToastificationCallbacks(
     //   onTap: (toastItem) => print('Toast ${toastItem.id} tapped'),
     //   onCloseButtonTap:

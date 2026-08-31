@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
-import 'package:gif_view/gif_view.dart';
-import 'package:provider/provider.dart';
 import 'package:stela_mobile/core/presentation/resources/drawables.dart';
-import 'package:stela_mobile/features/auth/presentation/manager/auth_provider.dart';
 import 'package:stela_mobile/core/presentation/widgets/borderless_textfield.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
+import 'package:stela_mobile/features/auth/presentation/manager/setup_cubit.dart';
 
 class AgePage extends StatefulWidget {
   const AgePage({super.key});
@@ -22,22 +22,21 @@ class _AgePageState extends State<AgePage> {
       child: Column(
         children: [
           const Gap(20),
-          GifView.asset(favStoryGif, height: 143, width: 102, frameRate: 60),
+          CustomImage(asset: mascot2, height: 150, width: 95),
           const Gap(8),
           Text(
             "How old are you?",
             style: theme.textTheme.bodyLarge?.copyWith(fontSize: 24),
           ),
           const Gap(36),
-          Consumer<AuthProvider>(
-            builder: (_, provider, _) {
-              final state = provider.state;
+          BlocBuilder<SetupCubit, SetupState>(
+            builder: (context, state) {
               return BorderlessTextField(
                 onChange: (value) {
-                  provider.setAge(value);
+                  context.read<SetupCubit>().setAge(value);
                 },
-                title: "Age",
-                hint: "Enter your age",
+                title: 'Age',
+                hint: 'Enter your age',
                 value: state.age,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,

@@ -9,51 +9,60 @@ import '../../di/core_module_container.dart';
 class ThemeProvider extends CustomProvider with AppTheme {
   final _pref = getIt.getAsync<SharedPreferences>();
   bool isDark = true;
-  ThemeOptions? currentTheme;
-  ThemeData? theme;
-  ThemeData? darkThemeData;
+  ThemeOptions currentTheme = ThemeOptions.dark;
+  late ThemeData theme = lightTheme();
+  late ThemeData darkThemeData = darkTheme();
+  ThemeMode themeMode = ThemeMode.dark;
 
   ThemeProvider() {
-    _pref.then((value) {
-      // isDark = value.getBool(_themeKey) ?? true;
-      getTheme();
-    });
+    _pref.then((_) => getTheme());
   }
 
-  getTheme() {
+  void getTheme() {
     _pref.then((value) {
-      final themePref = value.getString(_themeKey) ?? 'Light';
+      final themePref = value.getString(_themeKey) ?? 'Dark';
       currentTheme =
-          CustomThemeMode.customThemes[themePref]?.value ?? ThemeOptions.light;
+          CustomThemeMode.customThemes[themePref]?.value ?? ThemeOptions.dark;
       setTheme();
     });
   }
 
-  setTheme() {
-    switch (currentTheme!) {
+  void setTheme() {
+    theme = lightTheme();
+    darkThemeData = darkTheme();
+
+    switch (currentTheme) {
       case ThemeOptions.light:
-        darkThemeData = null;
-        theme = lightTheme();
-        break;
+        isDark = false;
+        themeMode = ThemeMode.light;
       case ThemeOptions.dark:
-        darkThemeData = null;
-        theme = darkTheme();
-        break;
+        isDark = true;
+        themeMode = ThemeMode.dark;
       case ThemeOptions.system:
-        darkThemeData = darkTheme();
-        theme = lightTheme();
-        break;
+        final platformDark =
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark;
+        isDark = platformDark;
+        themeMode = ThemeMode.system;
     }
 
     notifyListeners();
   }
 
-  setThemeMode(CustomThemeMode themeMode) {
-    currentTheme = themeMode.value;
+  void setThemeMode(CustomThemeMode themeModeOption) {
+    currentTheme = themeModeOption.value;
     setTheme();
     _pref.then((value) {
-      value.setString(_themeKey, themeMode.title);
+      value.setString(_themeKey, themeModeOption.title);
     });
+  }
+
+  void setLightMode(bool enabled) {
+    setThemeMode(
+      enabled
+          ? CustomThemeMode.customThemes['Light']!
+          : CustomThemeMode.customThemes['Dark']!,
+    );
   }
 
   final _themeKey = 'isDark';

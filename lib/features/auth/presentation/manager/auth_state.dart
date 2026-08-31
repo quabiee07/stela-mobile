@@ -1,4 +1,5 @@
 import 'package:stela_mobile/features/auth/domain/models/login_payload.dart';
+import 'package:stela_mobile/features/auth/domain/models/profile_setup_payload.dart';
 import 'package:stela_mobile/features/auth/domain/models/story_type.dart';
 import 'package:stela_mobile/features/auth/domain/models/user_payload.dart';
 
@@ -25,13 +26,16 @@ class AuthState {
   UserPayload get payload => UserPayload(
     email: email,
     password: password,
-    name: name,
-    age: age,
-    favoriteGenres: favouriteGenres,
   );
 
   LoginPayload get loginPayload => LoginPayload(
     email: email,
     password: password,
+  );
+
+  ProfileSetupPayload get profileSetupPayload => ProfileSetupPayload(
+    name: name,
+    age: int.parse(age),
+    storyPreferences: favouriteGenres,
   );
 }

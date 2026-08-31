@@ -1,0 +1,66 @@
+---
+description: Stela Flutter engineering standards (stack, architecture, security)
+alwaysApply: true
+---
+
+# Stela Flutter Engineering Standards
+
+Follow `flutter-cursor-rules.md` at the repo root. Prefer these defaults unless extending an existing alternative already in the file you are editing.
+
+## Preferred stack
+
+| Concern | Package |
+|---|---|
+| State | `flutter_bloc` (Cubit/Bloc + sealed states) |
+| DI | `get_it` + `injectable` |
+| Local structured data | `isar` (or Isar Community) — not SharedPreferences |
+| Secrets / tokens | `flutter_secure_storage` only |
+| Serialization | `json_serializable` DTOs |
+| Network | `dio` + `retrofit` |
+| Images | `fast_cached_network_image` via `CachedImage` |
+| Icons | `hugeicons` via `AppIcon` / `AppIcons` |
+| Animations | `flutter_animate` |
+
+## Architecture
+
+```
+presentation (widgets) → Cubit/Bloc → domain (use cases) → data (repos / retrofit / local)
+```
+
+- Widgets dispatch events / call cubit methods and render with `BlocBuilder` / `BlocSelector`. Never call repositories, Dio, Firestore, or secure storage from widgets.
+- Cubits call use cases (or repositories via use cases). Never call Dio/Retrofit directly.
+- Repositories own network and local persistence. Auth headers come from the Dio interceptor — do not pass `Bearer` tokens per call.
+- Register dependencies in feature `di/` modules + root `configureDependencies()`. Prefer constructor injection into Cubits.
+
+## State migration
+
+- **New features / touched managers:** implement as Cubit/Bloc. Do not add new `ChangeNotifier` / `CustomProvider` classes.
+- When editing an existing `*Provider`, migrate that manager to a Cubit in the same change when feasible.
+- Name states with sealed classes / explicit fields — no loose booleans for multi-step flows.
+
+## Networking & errors
+
+- Map `DioException` to `AppFailure` subtypes before UI. UI never inspects status codes or `DioException`.
+- Timeouts stay on the shared Dio client. Public endpoints (e.g. `/health`) must work without a token.
+- Paginate list endpoints; use `ListView.builder` / `SliverList` for dynamic collections.
+
+## Security & production
+
+- Never store tokens in SharedPreferences, globals, or Isar.
+- Never log tokens, passwords, or PII. No leftover `print()` in shipped paths.
+- Guard double-submit on auth/payment/session actions.
+
+## Icons & images
+
+- Add icons to `AppIcons` and render with `AppIcon`. No raw Material `Icons.*` for app chrome.
+- Network images only through `CachedImage`.
+---
+
+# Stela API (Part 2 placeholders)
+
+```
+Base URL (prod):  https://stela-mobile.web.app/api/
+Auth header:      Authorization: Bearer <Firebase ID Token>  (via Dio interceptor)
+```
+
+Public: `GET /health`. Authenticated: `/auth/*`, `/stories/*`, `/sessions/*`, `/streak*`, `/badges`, `/xp/*`.
