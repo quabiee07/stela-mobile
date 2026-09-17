@@ -46,7 +46,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return CubitScaffold<AuthCubit, AuthFormState>(
       create: (_) {
-        final cubit = AuthCubit();
+        final cubit = AuthCubit(mode: AuthFormMode.forgot);
         _effectSub?.cancel();
         _effectSub = cubit.effects.listen(_onEffect);
         return cubit;
@@ -90,6 +90,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Button2(
             title: state.loading ? 'Sending...' : 'Reset Password',
             isLoading: state.loading,
+            isEnabled: state.isValidated,
             onPressed: cubit.resetPassword,
           ),
           const Gap(55),

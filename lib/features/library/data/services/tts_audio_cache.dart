@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:stela_mobile/features/library/domain/models/synthesized_audio.dart';
@@ -83,14 +84,23 @@ class TtsAudioCache {
     final directory = Directory(
       '${root.path}${Platform.pathSeparator}tts_audio_cache',
     );
-    final digest = sha256
-        .convert(utf8.encode('$_cacheVersion|$modelId|$voiceId|$text'))
-        .toString();
+    final digest = cacheKey(text: text, voiceId: voiceId, modelId: modelId);
     return _CachePaths(
       directory: directory,
       audio: File('${directory.path}${Platform.pathSeparator}$digest.mp3'),
       metadata: File('${directory.path}${Platform.pathSeparator}$digest.json'),
     );
+  }
+
+  @visibleForTesting
+  static String cacheKey({
+    required String text,
+    required String voiceId,
+    required String modelId,
+  }) {
+    return sha256
+        .convert(utf8.encode('$_cacheVersion|$modelId|$voiceId|$text'))
+        .toString();
   }
 
   static List<String> _stringList(Object? value) =>

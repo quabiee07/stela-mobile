@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -101,7 +102,18 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   DateTime? _lastPositionEmitAt;
   static const _positionEmitInterval = Duration(milliseconds: 200);
 
+  /// Bumped on each chapter load / synth so stale async completions are ignored.
+  int _loadGen = 0;
+  int _synthGen = 0;
+  bool _handlingChapterComplete = false;
+
+  StreamSubscription<void>? _completeSub;
+  StreamSubscription<Duration>? _durationSub;
+  StreamSubscription<Duration>? _positionSub;
+
   String get fullText => _fullText;
+
+  int get _safeTotalChapters => math.max(state.totalChapters, 1);
 
   bool get isLoaded => _isLoaded;
 
@@ -109,15 +121,16 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     await _player.setPlayerMode(PlayerMode.mediaPlayer);
     await _player.setReleaseMode(ReleaseMode.stop);
 
-    _player.onPlayerComplete.listen((_) {
+    _completeSub = _player.onPlayerComplete.listen((_) {
       unawaited(_onChapterComplete());
     });
 
-    _player.onDurationChanged.listen((dur) {
-      emit(state.copyWith(duration: dur));
+    _durationSub = _player.onDurationChanged.listen((dur) {
+      if (!isClosed) emit(state.copyWith(duration: dur));
     });
 
-    _player.onPositionChanged.listen((pos) {
+    _positionSub = _player.onPositionChanged.listen((pos) {
+      if (isClosed) return;
       if (state.duration == Duration.zero) return;
       final now = DateTime.now();
       final last = _lastPositionEmitAt;
@@ -156,7 +169,9 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   void detachDetail() {
     _detailAttached = false;
     emit(state.copyWith(isDetailExpanded: false));
-    if (!state.isStoryComplete) {
+    if (state.isStoryComplete) {
+      unawaited(stopSession());
+    } else {
       unawaited(_saveReadingProgress());
     }
   }
@@ -179,6 +194,8 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     }
 
     await _resetPlaybackState();
+    _loadGen++;
+    _synthGen++;
     _sessionEnterTime = DateTime.now();
     _legacyStory = null;
 
@@ -219,12 +236,15 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   }
 
   Future<void> _loadChapterContent(String storyId, String chapterId) async {
+    final gen = ++_loadGen;
     emit(state.copyWith(isLoading: true, synthesisStage: 'Loading chapter...'));
 
     final useCase = GetChapterContentUseCase(_storiesRepo)
       ..param = GetChapterContentParams(storyId: storyId, chapterId: chapterId);
 
     final value = await useCase.invoke();
+    if (gen != _loadGen || isClosed) return;
+
     final result = value.getOrElse((error) {
       _effectsController.add(StoryPlaybackError(error.toString()));
       return null;
@@ -232,9 +252,18 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
 
     emit(state.copyWith(isLoading: false));
 
-    if (result != null) {
-      _setChapterText(result.fullText);
+    if (result == null) return;
+
+    final text = result.fullText.trim();
+    if (text.isEmpty) {
+      _fullText = '';
+      _effectsController.add(
+        StoryPlaybackError('This chapter has no text to read.'),
+      );
+      return;
     }
+
+    _setChapterText(text);
   }
 
   void _setChapterText(String text) {
@@ -243,6 +272,8 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   }
 
   Future<void> togglePlay() async {
+    if (state.isLoading || state.isCelebrating) return;
+
     if (state.isPlaying) {
       logg('[StoryPlayback] Pausing at ${state.position.inSeconds}s');
       emit(state.copyWith(isPlaying: false));
@@ -278,8 +309,15 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   }
 
   Future<void> synthesizeAndPlay() async {
-    if (_fullText.isEmpty) return;
+    if (state.isLoading || state.isCelebrating) return;
+    if (_fullText.isEmpty) {
+      _effectsController.add(
+        StoryPlaybackError('This chapter has no text to read.'),
+      );
+      return;
+    }
 
+    final gen = ++_synthGen;
     logg('[StoryPlayback] Synthesizing chapter via ElevenLabs...');
     emit(
       state.copyWith(
@@ -291,11 +329,14 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     _startSynthesisProgressSimulation();
 
     final voiceId = await _voicePreferenceStore.getSelectedVoiceId();
+    if (gen != _synthGen || isClosed) return;
 
     final value = await SynthesizeStoryUseCase(
       _repo,
       SynthesizeStoryPayload(text: _fullText, voiceId: voiceId),
     ).invoke();
+
+    if (gen != _synthGen || isClosed) return;
 
     final result = value.getOrElse((error) {
       _effectsController.add(StoryPlaybackError(error.toString()));
@@ -303,17 +344,25 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     });
 
     if (result != null) {
-      await _loadAndPlay(result);
+      await _loadAndPlay(result, synthGen: gen);
     } else {
       _stopSynthesisProgressSimulation(complete: false);
-      emit(state.copyWith(isLoading: false));
+      if (gen == _synthGen && !isClosed) {
+        emit(state.copyWith(isLoading: false));
+      }
     }
   }
 
-  Future<void> _loadAndPlay(SynthesizedAudio audio) async {
+  Future<void> _loadAndPlay(
+    SynthesizedAudio audio, {
+    required int synthGen,
+  }) async {
+    if (synthGen != _synthGen || isClosed) return;
+
     try {
       _clearSynthFile();
       await _player.stop();
+      if (synthGen != _synthGen || isClosed) return;
 
       _expectedChunkCount = 1;
       _startSynthesisProgressSimulation();
@@ -321,6 +370,9 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
       if (audio.bytes.isEmpty) {
         _stopSynthesisProgressSimulation(complete: false);
         emit(state.copyWith(isLoading: false));
+        _effectsController.add(
+          StoryPlaybackError('Narration audio was empty. Please try again.'),
+        );
         return;
       }
       _onSynthesisChunkReceived();
@@ -336,6 +388,12 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
         '${Directory.systemTemp.path}/stela_tts_${DateTime.now().millisecondsSinceEpoch}.mp3',
       );
       await audioFile.writeAsBytes(audio.bytes);
+      if (synthGen != _synthGen || isClosed) {
+        try {
+          audioFile.deleteSync();
+        } catch (_) {}
+        return;
+      }
 
       _audioFilePath = audioFile.path;
       _cachedAudio = audio;
@@ -344,6 +402,8 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
       _stopSynthesisProgressSimulation();
       await _player.play(DeviceFileSource(audioFile.path));
       await _applyPlaybackRate();
+
+      if (synthGen != _synthGen || isClosed) return;
 
       _isLoaded = true;
       emit(
@@ -355,6 +415,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
         ),
       );
     } catch (e) {
+      if (synthGen != _synthGen || isClosed) return;
       _stopSynthesisProgressSimulation(complete: false);
       emit(state.copyWith(isLoading: false, isPlaying: false));
       _isLoaded = false;
@@ -418,6 +479,10 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     bool autoPlay = true,
     bool announce = false,
   }) async {
+    if (state.isCelebrating) {
+      logg('[StoryPlayback] Ignoring jumpToChapter while celebrating');
+      return;
+    }
     final context = state.readingContext;
     if (context == null || state.autoAdvancing) return;
     if (chapter.chapterId == context.chapterId) return;
@@ -438,6 +503,8 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
 
     try {
       await _resetPlaybackState();
+      _loadGen++;
+      _synthGen++;
 
       final updated = context.copyWithChapter(chapter);
       emit(
@@ -453,64 +520,133 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
 
       unawaited(
         _saveReadingProgress(
-          overrideProgress: (chapter.chapterNumber - 1) / state.totalChapters,
+          overrideProgress:
+              (chapter.chapterNumber - 1) / _safeTotalChapters,
         ),
       );
 
-      emit(state.copyWith(clearTransitionMessage: true));
+      if (!isClosed) {
+        emit(state.copyWith(clearTransitionMessage: true));
+      }
       if (autoPlay && _fullText.isNotEmpty) {
         await synthesizeAndPlay();
       }
     } finally {
-      emit(state.copyWith(autoAdvancing: false, clearTransitionMessage: true));
+      if (!isClosed) {
+        emit(
+          state.copyWith(autoAdvancing: false, clearTransitionMessage: true),
+        );
+      }
     }
   }
 
   Future<void> _onChapterComplete() async {
+    if (_handlingChapterComplete || !state.hasSession) return;
+    _handlingChapterComplete = true;
+
     logg('[StoryPlayback] Chapter playback completed.');
     _isLoaded = false;
+
+    final finishingBook = state.isLastChapter;
+
+    // Hard pause — celebration (if any) owns the gate before auto-advance.
+    // Mark the book complete immediately so the mini player never reappears
+    // when the reader is popped under the celebration screens.
+    try {
+      await _player.pause();
+    } catch (_) {}
     emit(
       state.copyWith(
         isPlaying: false,
         position: state.duration,
+        isCelebrating: true,
+        isStoryComplete: finishingBook,
       ),
     );
 
-    await _logChapterSession(isBookComplete: state.isLastChapter);
-
-    if (_rewardUiCompleter != null) {
-      try {
-        await _rewardUiCompleter!.future.timeout(const Duration(seconds: 8));
-      } catch (_) {}
-      _rewardUiCompleter = null;
-    }
-
-    final context = state.readingContext;
-    if (context != null) {
-      if (state.isLastChapter) {
+    try {
+      final context = state.readingContext;
+      if (finishingBook && context != null) {
         await _readingProgressService.markComplete(context.storyId);
-      } else {
+      }
+
+      await _logChapterSession(isBookComplete: finishingBook);
+      await _awaitCelebrationGate();
+
+      if (isClosed) return;
+      emit(state.copyWith(isCelebrating: false));
+
+      if (!finishingBook && context != null) {
         await _saveReadingProgress(
-          overrideProgress: state.chapterNumber / state.totalChapters,
+          overrideProgress: state.chapterNumber / _safeTotalChapters,
         );
+        final next = context.nextChapter;
+        if (next != null) {
+          await jumpToChapter(next, autoPlay: true, announce: true);
+        }
+        return;
+      }
+
+      if (finishingBook) {
+        await stopSession();
+      }
+    } finally {
+      _handlingChapterComplete = false;
+    }
+  }
+
+  /// Waits until [ReadingRewardUi] finishes (or there was nothing to show).
+  /// Does not time out into autoplay under a visible celebration screen.
+  Future<void> _awaitCelebrationGate() async {
+    final gate = _rewardUiCompleter;
+    if (gate == null) return;
+
+    try {
+      await gate.future;
+    } catch (_) {
+      // Completer should not error; ignore if it does.
+    } finally {
+      if (identical(_rewardUiCompleter, gate)) {
+        _rewardUiCompleter = null;
       }
     }
+  }
 
-    if (context != null && !state.isLastChapter) {
-      final next = context.nextChapter;
-      if (next != null) {
-        await jumpToChapter(next, autoPlay: true, announce: true);
-      }
-      return;
+  void _releaseCelebrationGate() {
+    final gate = _rewardUiCompleter;
+    if (gate != null && !gate.isCompleted) {
+      gate.complete();
     }
-
-    emit(state.copyWith(isStoryComplete: true));
+    _rewardUiCompleter = null;
+    if (!isClosed && state.isCelebrating) {
+      emit(state.copyWith(isCelebrating: false));
+    }
   }
 
   Future<void> stopSession() async {
+    _releaseCelebrationGate();
+    if (!state.hasSession) {
+      await _mediaHandler?.clear();
+      return;
+    }
     await _finalizeSessionOnStop();
     await _resetPlaybackState();
     emit(state.copyWith(clearSession: true));
+    await _mediaHandler?.clear();
+  }
+
+  /// Tear down playback on logout without posting a session (auth is ending).
+  /// Still persists local progress so same-account restore stays accurate.
+  Future<void> clearForLogout() async {
+    _sessionEnterTime = null;
+    _releaseCelebrationGate();
+    try {
+      if (state.hasSession && !state.isStoryComplete) {
+        await _saveReadingProgress();
+      }
+    } catch (_) {}
+    await _resetPlaybackState();
+    if (!isClosed) emit(state.copyWith(clearSession: true));
     await _mediaHandler?.clear();
   }
 
@@ -533,15 +669,22 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   }
 
   Future<void> onDetailDisposed() async {
+    // If the reader leaves while a gate is open, don't leave playback stuck.
+    _releaseCelebrationGate();
     detachDetail();
   }
 
   Future<void> _resetPlaybackState() async {
     _stopSynthesisProgressSimulation(complete: false);
+    // Invalidate any in-flight chapter load / TTS so stale completions no-op.
+    _loadGen++;
+    _synthGen++;
     _clearSynthFile();
     _cachedAudio = null;
     _isLoaded = false;
+    _fullText = '';
     await _player.stop();
+    if (isClosed) return;
     emit(
       state.copyWith(
         position: Duration.zero,
@@ -569,7 +712,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     _updateSynthesisStage(0);
 
     _synthesisStageTimer = Timer.periodic(const Duration(milliseconds: 350), (_) {
-      if (!state.isLoading) return;
+      if (isClosed || !state.isLoading) return;
 
       final chunkTarget = _expectedChunkCount > 0
           ? (_chunksReceived / _expectedChunkCount * 0.92).clamp(0.0, 0.92)
@@ -582,8 +725,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
         progress = (progress + 0.008).clamp(0.0, 0.1);
       }
 
-      _updateSynthesisStage(progress);
-      emit(state.copyWith(synthesisProgress: progress));
+      _emitSynthesis(progress);
     });
   }
 
@@ -602,31 +744,36 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
 
   void _onSynthesisChunkReceived() {
     _chunksReceived++;
-    if (_expectedChunkCount > 0) {
-      emit(
-        state.copyWith(
-          synthesisProgress: (_chunksReceived / _expectedChunkCount * 0.92)
-              .clamp(0.0, 0.92),
-        ),
-      );
-    }
-    _updateSynthesisStage(state.synthesisProgress);
+    if (_expectedChunkCount <= 0) return;
+    _emitSynthesis(
+      (_chunksReceived / _expectedChunkCount * 0.92).clamp(0.0, 0.92),
+    );
   }
 
   void _updateSynthesisStage(double p) {
-    String stage;
-    if (p < 0.12) {
-      stage = 'Warming up the narrator...';
-    } else if (p < 0.32) {
-      stage = 'Phonemizing your chapter...';
-    } else if (p < 0.58) {
-      stage = 'Generating voice audio...';
-    } else if (p < 0.82) {
-      stage = 'Blending audio together...';
-    } else {
-      stage = 'Almost ready...';
+    _emitSynthesis(p);
+  }
+
+  void _emitSynthesis(double progress) {
+    if (isClosed) return;
+    final stage = _stageForProgress(progress);
+    if (state.synthesisProgress == progress && state.synthesisStage == stage) {
+      return;
     }
-    emit(state.copyWith(synthesisStage: stage));
+    emit(
+      state.copyWith(
+        synthesisProgress: progress,
+        synthesisStage: stage,
+      ),
+    );
+  }
+
+  static String _stageForProgress(double p) {
+    if (p < 0.12) return 'Warming up the narrator...';
+    if (p < 0.32) return 'Phonemizing your chapter...';
+    if (p < 0.58) return 'Generating voice audio...';
+    if (p < 0.82) return 'Blending audio together...';
+    return 'Almost ready...';
   }
 
   Future<SessionLogResult?> _logChapterSession({
@@ -713,17 +860,18 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   Future<void> _saveReadingProgress({double? overrideProgress}) async {
     final context = state.readingContext;
     if (context == null || state.isStoryComplete) return;
+    if (state.totalChapters <= 0 && overrideProgress == null) return;
 
+    final total = _safeTotalChapters;
     double progress;
     if (overrideProgress != null) {
       progress = overrideProgress;
     } else if (state.duration > Duration.zero) {
       final chapterFraction =
           state.position.inSeconds / state.duration.inSeconds;
-      progress =
-          ((state.chapterNumber - 1) + chapterFraction) / state.totalChapters;
+      progress = ((state.chapterNumber - 1) + chapterFraction) / total;
     } else {
-      progress = (state.chapterNumber - 1) / state.totalChapters;
+      progress = (state.chapterNumber - 1) / total;
     }
 
     progress = progress.clamp(0.0, 0.99);
@@ -776,6 +924,9 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   Future<void> close() async {
     await _readingPrefsSub?.cancel();
     _mediaSyncSub?.cancel();
+    await _completeSub?.cancel();
+    await _durationSub?.cancel();
+    await _positionSub?.cancel();
     _mediaHandler?.unbind();
     _stopSynthesisProgressSimulation(complete: false);
     _clearSynthFile();

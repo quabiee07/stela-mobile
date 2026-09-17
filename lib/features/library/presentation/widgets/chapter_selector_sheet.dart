@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
+import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
 import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
+import 'package:stela_mobile/core/presentation/widgets/cached_image.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
+import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/features/library/domain/models/chapter_summary.dart';
 
 Future<ChapterSummary?> showChapterSelectorSheet(
@@ -71,6 +74,8 @@ Future<ChapterSummary?> showChapterSelectorSheet(
                   itemBuilder: (context, index) {
                     final chapter = chapters[index];
                     final isSelected = chapter.chapterId == currentChapterId;
+                    final hasNetworkCover =
+                        chapter.imageUrl?.startsWith('http') ?? false;
 
                     return Clickable(
                       onPressed: () => Navigator.of(sheetContext).pop(chapter),
@@ -92,22 +97,26 @@ Future<ChapterSummary?> showChapterSelectorSheet(
                             Container(
                               width: 44,
                               height: 44,
+                              clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? orange.withValues(alpha: 0.2)
                                     : sheetContext.chipFill,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Center(
-                                child: Text(
-                                  '${chapter.chapterNumber}',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: isSelected ? orange : onSurface,
-                                  ),
-                                ),
-                              ),
+                              child: hasNetworkCover
+                                  ? CachedImage(
+                                      asset: chapter.imageUrl ?? '',
+                                      width: 44,
+                                      height: 44,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : CustomImage(
+                                      asset: boyDragon,
+                                      width: 44,
+                                      height: 44,
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                             const Gap(14),
                             Expanded(

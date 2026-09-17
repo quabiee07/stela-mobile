@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
+import 'package:stela_mobile/core/config/app_secrets.dart';
 import 'package:stela_mobile/core/data/storage/secure_token_storage.dart';
 import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
 
@@ -18,7 +18,9 @@ class FirebaseAuthService {
 
   static Future<void> initSignIn() async {
     if (!isInitialize) {
-      await _googleSignIn.initialize(serverClientId: dotenv.env['SERVER_ID']);
+      await _googleSignIn.initialize(
+        serverClientId: AppSecrets.googleServerClientId(),
+      );
     }
     isInitialize = true;
   }

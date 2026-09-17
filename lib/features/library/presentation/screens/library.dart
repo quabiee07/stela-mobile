@@ -79,7 +79,7 @@ class _LibraryBodyState extends State<_LibraryBody> {
               Expanded(
                 child: RefreshIndicator(
                   color: orange,
-                  onRefresh: cubit.loadStories,
+                  onRefresh: () => cubit.loadStories(force: true),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: CustomScrollView(

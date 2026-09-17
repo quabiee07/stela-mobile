@@ -17,6 +17,7 @@ class StoryAudioHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> sync(StoryPlaybackState state) async {
     if (!state.hasSession ||
+        state.isStoryComplete ||
         (!state.isPlaying &&
             !state.isLoading &&
             state.duration == Duration.zero)) {

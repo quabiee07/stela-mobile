@@ -1,4 +1,6 @@
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -12,12 +14,31 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: 'assets/env/.env');
+  } catch (_) {
+    // Optional local secrets. Missing .env must not block startup.
+  }
+
+  var firebaseReady = false;
+  try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    firebaseReady = true;
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
   }
+
+  if (firebaseReady) {
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+      !kDebugMode,
+    );
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
+
   FastCachedImageConfig.init(clearCacheAfter: const Duration(days: 15));
   await configureDependencies();
 

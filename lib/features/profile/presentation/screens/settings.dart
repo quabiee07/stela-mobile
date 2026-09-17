@@ -2,13 +2,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
 import 'package:stela_mobile/core/presentation/manager/theme_provider.dart';
 import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
 import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
 import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
+import 'package:stela_mobile/core/presentation/widgets/app_playback_overlay.dart';
 import 'package:stela_mobile/core/presentation/widgets/button.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/core/presentation/widgets/cubit_scaffold.dart';
@@ -29,7 +29,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _audioOn = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,29 +39,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: (context, cubit, state, theme) {
         return [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        PopWidget(),
-                        Text(
-                          'Settings',
-                          style: theme.textTheme.displayMedium?.copyWith(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 36),
-                      ],
-                    ),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: floatingMiniPlayerVisible,
+              builder: (context, floatingMini, _) {
+                return SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    top: 18,
+                    bottom: floatingMini
+                        ? floatingMiniPlayerClearance(context) + 16
+                        : 24,
                   ),
-                  const Gap(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            PopWidget(),
+                            Text(
+                              'Settings',
+                              style: theme.textTheme.displayMedium?.copyWith(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 36),
+                          ],
+                        ),
+                      ),
+                      const Gap(12),
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -92,12 +99,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           height: .6,
                           color: context.divider,
                         ),
-                        SettingsCard(
-                          icon: AppIcons.voice,
-                          title: 'Narrator Voice',
-                          trailing: Clickable(
-                            onPressed: () => showVoicePickerSheet(context),
-                            child: Row(
+                        Clickable(
+                          onPressed: () => showVoicePickerSheet(context),
+                          child: SettingsCard(
+                            icon: AppIcons.voice,
+                            title: 'Narrator Voice',
+                            trailing: Row(
                               children: [
                                 Text(
                                   'Choose',
@@ -111,25 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                         ),
-                        Divider(
-                          thickness: .6,
-                          height: .6,
-                          color: context.divider,
-                        ),
-                        SettingsCard(
-                          icon: AppIcons.voice,
-                          title: 'Audio On',
-                          trailing: CupertinoSwitch(
-                            value: _audioOn,
-                            activeTrackColor: orange,
-                            inactiveTrackColor: grey400,
-                            onChanged: (value) {
-                              setState(() {
-                                _audioOn = value;
-                              });
-                            },
-                          ),
-                        ),
+                    
                         Divider(
                           thickness: .6,
                           height: .6,
@@ -271,8 +260,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                           builder: (sheetContext) {
-                            return BlocProvider(
-                              create: (_) => createProfileCubit(),
+                            final profileCubit = context.read<ProfileCubit>();
+                            return BlocProvider.value(
+                              value: profileCubit,
                               child: BlocBuilder<ProfileCubit, AccountState>(
                                 builder: (profileContext, profileState) {
                                   return Padding(
@@ -376,8 +366,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                     isLoading:
                                                         profileState.isLoggingOut,
                                                     onPressed: () {
-                                                      // Use profileContext (under BlocProvider),
-                                                      // not sheetContext (above it).
                                                       profileContext
                                                           .read<ProfileCubit>()
                                                           .clearUserSession(
@@ -404,7 +392,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ],
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ];

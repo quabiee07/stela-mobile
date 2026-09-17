@@ -11,4 +11,7 @@ abstract class SessionRepository {
     required bool isBookComplete,
     required double speedMultiplier,
   });
+
+  /// Replays queued logs that failed while offline or unauthenticated.
+  Future<void> flushPending();
 }

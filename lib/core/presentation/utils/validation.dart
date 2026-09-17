@@ -93,7 +93,7 @@ extension Validation on String {
 
   String? validatePassword() {
     if (isEmpty) {
-      '*required';
+      return '*required';
     }
     RegExp regex = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*[!@#$%^&*_ ]+).{8,}$');
     if (regex.hasMatch(this)) {
@@ -113,7 +113,7 @@ extension Validation on String {
     }
 
     if (length < 8) {
-      'must be at least 8 characters';
+      return 'must be at least 8 characters';
     }
 
     return 'invalid password';

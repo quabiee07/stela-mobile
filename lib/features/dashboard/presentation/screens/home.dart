@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:stela_mobile/core/domain/utils/constants.dart';
-import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
 import 'package:stela_mobile/core/presentation/utils/custom_state.dart';
 import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
 import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
-import 'package:stela_mobile/core/presentation/utils/snack_bar_utils.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
+import 'package:stela_mobile/core/presentation/widgets/profile_avatar.dart';
 import 'package:stela_mobile/features/dashboard/presentation/manager/home_cubit.dart';
 import 'package:stela_mobile/features/dashboard/presentation/manager/home_state.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/continue_reading_screen.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_cubit.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_state.dart';
+import 'package:stela_mobile/features/profile/presentation/screens/streak_calendar.dart';
 import 'package:stela_mobile/features/dashboard/presentation/widgets/continue_reading_list.dart';
 import 'package:stela_mobile/features/dashboard/presentation/widgets/featured_stories_carousel.dart';
 import 'package:stela_mobile/features/dashboard/presentation/widgets/home_screen_shimmer.dart';
@@ -30,24 +30,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends CustomState<HomeScreen> {
-  StreamSubscription<HomeEffect>? _effectsSub;
-
-  @override
-  void onStarted() {
-    _effectsSub = context.read<HomeCubit>().effects.listen((event) {
-      if (event is HomeErrorEffect) {
-        showError(event.message);
-      }
-    });
-    super.onStarted();
-  }
-
-  @override
-  void dispose() {
-    _effectsSub?.cancel();
-    super.dispose();
-  }
-
   @override
   void onPopNext() {
     // Only refresh local continue-reading — do not re-fetch stories /
@@ -56,14 +38,6 @@ class _HomeScreenState extends CustomState<HomeScreen> {
       unawaited(context.read<HomeCubit>().refreshContinueReading());
     }
     super.onPopNext();
-  }
-
-    ImageProvider _avatarImage() {
-    final avatarUrl = cachedUser?.avatarUrl ?? '';
-    if (avatarUrl.isNotEmpty && !avatarUrl.startsWith('http')) {
-      return AssetImage(avatarUrl);
-    }
-    return const AssetImage(femaleAvatar);
   }
 
   @override
@@ -77,9 +51,12 @@ class _HomeScreenState extends CustomState<HomeScreen> {
           prev.newStories != curr.newStories ||
           prev.genres != curr.genres ||
           prev.firstName != curr.firstName ||
+          prev.profilePicture != curr.profilePicture ||
           prev.isResumingStory != curr.isResumingStory,
       builder: (context, state) {
-        final name = cachedUser?.name ?? state.firstName;
+        final name = state.firstName.isNotEmpty
+            ? state.firstName
+            : (cachedUser?.name.split(' ').firstOrNull ?? 'Reader');
         final isInitialLoading =
             state.isLoadingStories && state.stories.isEmpty;
 
@@ -97,6 +74,7 @@ class _HomeScreenState extends CustomState<HomeScreen> {
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,10 +97,11 @@ class _HomeScreenState extends CustomState<HomeScreen> {
                                 const _StreakChip(),
                               ],
                             ),
-                             CircleAvatar(
+                            ProfileAvatar(
+                              avatarUrl: state.profilePicture.isNotEmpty
+                                  ? state.profilePicture
+                                  : (cachedUser?.avatarUrl ?? ''),
                               radius: 24,
-                              backgroundColor: Color(0xFFF3ABA7),
-                              backgroundImage: _avatarImage(),
                             ),
                           ],
                         ),
@@ -130,9 +109,10 @@ class _HomeScreenState extends CustomState<HomeScreen> {
                         const _StreakAtRiskBanner(),
                         FeaturedStoriesCarousel(
                           stories: state.featuredStories,
-                          onTap: (story) => context
-                              .read<HomeCubit>()
-                              .openStory(context, story.storyId),
+                          onTap: (story) => context.read<HomeCubit>().openStory(
+                            context,
+                            story.storyId,
+                          ),
                         ),
                         const Gap(24),
                         Row(
@@ -151,10 +131,7 @@ class _HomeScreenState extends CustomState<HomeScreen> {
                               },
                               child: Text(
                                 'See all',
-                                style: TextStyle(
-                                  color: orange,
-                                  fontSize: 14,
-                                ),
+                                style: TextStyle(color: orange, fontSize: 14),
                               ),
                             ),
                           ],
@@ -201,18 +178,21 @@ class _StreakChip extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: orange.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(100),
-        ),
-        child: Text(
-          '🔥 $streakDays-day streak',
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: orange,
+      child: Clickable(
+        onPressed: () => context.push(const StreakCalendarScreen()),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: orange.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Text(
+            '🔥 $streakDays-day streak',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: orange,
+            ),
           ),
         ),
       ),
@@ -228,8 +208,7 @@ class _StreakAtRiskBanner extends StatelessWidget {
     return BlocBuilder<GamificationCubit, GamificationState>(
       buildWhen: (prev, curr) =>
           prev.isStreakAtRisk != curr.isStreakAtRisk ||
-          prev.streakInfo?.freezeAvailable !=
-              curr.streakInfo?.freezeAvailable,
+          prev.streakInfo?.freezeAvailable != curr.streakInfo?.freezeAvailable,
       builder: (context, gamification) {
         if (!gamification.isStreakAtRisk) {
           return const SizedBox.shrink();

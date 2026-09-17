@@ -8,6 +8,8 @@ class PlaybackMediaService {
   PlaybackMediaService._();
 
   static StoryAudioHandler? _handler;
+  static bool _interruptionListenersAttached = false;
+  static bool _resumeAfterInterruption = false;
 
   static StoryAudioHandler? get handler => _handler;
 
@@ -29,5 +31,36 @@ class PlaybackMediaService {
         rewindInterval: Duration(seconds: 10),
       ),
     );
+
+    _attachInterruptionListeners(session);
+  }
+
+  static void _attachInterruptionListeners(AudioSession session) {
+    if (_interruptionListenersAttached) return;
+    _interruptionListenersAttached = true;
+
+    session.interruptionEventStream.listen((event) async {
+      final handler = _handler;
+      if (handler == null) return;
+
+      if (event.begin) {
+        switch (event.type) {
+          case AudioInterruptionType.duck:
+            break;
+          case AudioInterruptionType.pause:
+          case AudioInterruptionType.unknown:
+            _resumeAfterInterruption = handler.playbackState.value.playing;
+            await handler.pause();
+        }
+      } else if (_resumeAfterInterruption) {
+        _resumeAfterInterruption = false;
+        await handler.play();
+      }
+    });
+
+    session.becomingNoisyEventStream.listen((_) async {
+      _resumeAfterInterruption = false;
+      await _handler?.pause();
+    });
   }
 }

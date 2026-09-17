@@ -74,6 +74,7 @@ class Button2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Clickable(
+      isEnabled: isEnabled && !isLoading,
       onPressed: onPressed,
       child: Container(
         height: 54,

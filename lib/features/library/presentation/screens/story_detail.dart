@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
-import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
@@ -18,11 +17,13 @@ import 'package:stela_mobile/features/library/presentation/manager/story_detail_
 import 'package:stela_mobile/features/library/presentation/manager/story_detail_state.dart';
 import 'package:stela_mobile/features/dashboard/domain/models/story.dart';
 import 'package:stela_mobile/features/library/domain/models/story_reading_context.dart';
+import 'package:stela_mobile/features/library/presentation/utils/playback_hero_tags.dart';
 import 'package:stela_mobile/features/library/presentation/utils/reading_reward_ui.dart';
 import 'package:stela_mobile/features/library/presentation/widgets/audio_player.dart';
 import 'package:stela_mobile/features/library/presentation/widgets/chapter_selector_sheet.dart';
 import 'package:stela_mobile/features/library/presentation/widgets/lyrics_widget.dart';
 import 'package:stela_mobile/features/library/presentation/widgets/playback_cover_hero.dart';
+import 'package:stela_mobile/features/library/presentation/widgets/synthesizing_indicator.dart';
 
 class StoryDetailScreen extends StatefulWidget {
   const StoryDetailScreen({super.key, this.story, this.readingContext})
@@ -204,20 +205,30 @@ class _StoryDetailScreenState extends CustomState<StoryDetailScreen> {
               ),
             ),
           const Gap(12),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: ClipRRect(
-              key: ValueKey('${state.chapterNumber}-$imageUrl'),
-              borderRadius: BorderRadius.circular(24),
-              child: AspectRatio(
-                aspectRatio: 16 / 14,
-                child: PlaybackCoverHero(
-                  storyId: storyId,
-                  imageUrl: imageUrl,
-                  borderRadius: 24,
-                  fit: BoxFit.cover,
+          // Keep a single Hero outside AnimatedSwitcher — switching chapters
+          // would otherwise mount two covers with the same playback-cover tag
+          // (and collide when streak/success routes push).
+          Hero(
+            tag: PlaybackHeroTags.cover(storyId),
+            child: Material(
+              type: MaterialType.transparency,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: AspectRatio(
+                  aspectRatio: 16 / 14,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: PlaybackCoverHero(
+                      key: ValueKey('${state.chapterNumber}-$imageUrl'),
+                      storyId: storyId,
+                      imageUrl: imageUrl,
+                      borderRadius: 24,
+                      fit: BoxFit.cover,
+                      useHero: false,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -226,6 +237,7 @@ class _StoryDetailScreenState extends CustomState<StoryDetailScreen> {
           Expanded(
             child: Container(
               width: double.infinity,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: context.cardSurface,
                 borderRadius: BorderRadius.circular(32),
@@ -241,28 +253,10 @@ class _StoryDetailScreenState extends CustomState<StoryDetailScreen> {
                     ),
                   const Gap(12),
                   Expanded(
-                    child: state.showSynthesizingOverlay
-                        ? BlocBuilder<StoryDetailCubit, StoryDetailState>(
-                            buildWhen: (p, c) =>
-                                p.synthesisProgress != c.synthesisProgress ||
-                                p.synthesisStage != c.synthesisStage ||
-                                p.loadingMessage != c.loadingMessage ||
-                                p.isLoading != c.isLoading ||
-                                p.showSynthesizingOverlay !=
-                                    c.showSynthesizingOverlay,
-                            builder: (context, loadingState) {
-                              return _SynthesizingIndicator(
-                                message: loadingState.loadingMessage,
-                                progress: loadingState.isLoading
-                                    ? loadingState.synthesisProgress
-                                    : null,
-                                stage: loadingState.isLoading
-                                    ? loadingState.synthesisStage
-                                    : null,
-                              );
-                            },
-                          )
-                        : Padding(
+                    child: Stack(
+                      children: [
+                        if (state.lyricsInitialized)
+                          Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: LyricsWidget(
                               lines: state.lines,
@@ -272,6 +266,34 @@ class _StoryDetailScreenState extends CustomState<StoryDetailScreen> {
                               onSeek: cubit.seekTo,
                             ),
                           ),
+                        if (state.showSynthesizingOverlay)
+                          Positioned.fill(
+                            child: BlocSelector<
+                                StoryDetailCubit,
+                                StoryDetailState,
+                                ({int bucket, String label})>(
+                              selector: (s) => (
+                                bucket: s.isLoading
+                                    ? (s.synthesisProgress * 20)
+                                        .round()
+                                        .clamp(0, 20)
+                                    : -1,
+                                label: s.isLoading
+                                    ? s.synthesisStage
+                                    : s.loadingMessage,
+                              ),
+                              builder: (context, view) {
+                                return SynthesizingIndicator(
+                                  label: view.label,
+                                  progress: view.bucket < 0
+                                      ? null
+                                      : view.bucket / 20,
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                   BlocBuilder<StoryDetailCubit, StoryDetailState>(
                     buildWhen: (p, c) =>
@@ -353,158 +375,5 @@ class _ChapterTransitionBanner extends StatelessWidget {
           duration: 300.ms,
           curve: Curves.easeOutCubic,
         );
-  }
-}
-
-class _SynthesizingIndicator extends StatelessWidget {
-  const _SynthesizingIndicator({
-    required this.message,
-    this.progress,
-    this.stage,
-  });
-
-  final String message;
-  final double? progress;
-  final String? stage;
-
-  static const _steps = [
-    'Warming up the narrator',
-    'Phonemizing your chapter',
-    'Generating voice audio',
-    'Blending audio together',
-  ];
-
-  int get _activeStep {
-    final p = progress ?? 0;
-    if (p < 0.25) return 0;
-    if (p < 0.5) return 1;
-    if (p < 0.75) return 2;
-    return 3;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final showSteps = progress != null;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final muted = context.mutedText;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LoadingAnimationWidget.staggeredDotsWave(
-                  color: orange,
-                  size: 48,
-                ),
-                const Gap(20),
-                Text(
-                  stage ?? message,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: onSurface,
-                  ),
-                ),
-                const Gap(8),
-                Text(
-                  'Hang tight — your story is being readied for you.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: muted, height: 1.4),
-                ),
-                if (showSteps) ...[
-                  const Gap(20),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(100),
-                    child: LinearProgressIndicator(
-                      value: progress!.clamp(0.0, 1.0),
-                      minHeight: 6,
-                      backgroundColor: context.softBorder,
-                      color: orange,
-                    ),
-                  ),
-                  const Gap(8),
-                  Text(
-                    '${(progress!.clamp(0.0, 1.0) * 100).round()}%',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: muted,
-                    ),
-                  ),
-                  const Gap(16),
-                  ...List.generate(_steps.length, (i) {
-                    final isDone = i < _activeStep;
-                    final isActive = i == _activeStep;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: 22,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDone || isActive
-                                  ? orange
-                                  : context.softBorder,
-                            ),
-                            child: isDone
-                                ? const AppIcon(
-                                    AppIcons.check,
-                                    size: 14,
-                                    color: Colors.white,
-                                  )
-                                : isActive
-                                ? const Padding(
-                                    padding: EdgeInsets.all(5),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                          const Gap(12),
-                          Expanded(
-                            child: Text(
-                              _steps[i],
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: isActive
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: isDone || isActive ? onSurface : muted,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ] else ...[
-                  const Gap(16),
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: orange,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 }

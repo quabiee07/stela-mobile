@@ -11,6 +11,7 @@ class LibraryState extends Equatable {
     this.selectedGenre = 'All',
     this.isLoading = false,
     this.isLoadingDetail = false,
+    this.detailError,
   });
 
   final List<StorySummary> stories;
@@ -19,6 +20,7 @@ class LibraryState extends Equatable {
   final String selectedGenre;
   final bool isLoading;
   final bool isLoadingDetail;
+  final String? detailError;
 
   List<StorySummary> get filteredStories {
     final query = searchQuery.trim().toLowerCase();
@@ -57,6 +59,8 @@ class LibraryState extends Equatable {
     String? selectedGenre,
     bool? isLoading,
     bool? isLoadingDetail,
+    String? detailError,
+    bool clearDetailError = false,
   }) {
     return LibraryState(
       stories: stories ?? this.stories,
@@ -66,6 +70,8 @@ class LibraryState extends Equatable {
       selectedGenre: selectedGenre ?? this.selectedGenre,
       isLoading: isLoading ?? this.isLoading,
       isLoadingDetail: isLoadingDetail ?? this.isLoadingDetail,
+      detailError:
+          clearDetailError ? null : (detailError ?? this.detailError),
     );
   }
 
@@ -77,5 +83,6 @@ class LibraryState extends Equatable {
         selectedGenre,
         isLoading,
         isLoadingDetail,
+        detailError,
       ];
 }

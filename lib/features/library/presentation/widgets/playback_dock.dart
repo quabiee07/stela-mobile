@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
+import 'package:stela_mobile/core/presentation/widgets/app_playback_overlay.dart';
 import 'package:stela_mobile/core/presentation/widgets/bottom_nav_bar.dart';
 import 'package:stela_mobile/features/library/presentation/manager/story_playback_cubit.dart';
 import 'package:stela_mobile/features/library/presentation/manager/story_playback_state.dart';
@@ -42,62 +43,73 @@ class PlaybackDock extends StatelessWidget {
     final surface =
         context.isDarkTheme ? darkSurface : theme.colorScheme.surface;
 
-    return BlocBuilder<StoryPlaybackCubit, StoryPlaybackState>(
-      buildWhen: _chromeChanged,
-      builder: (context, playbackState) {
-        final showMini = playbackState.showMiniPlayer;
+    return ValueListenableBuilder<bool>(
+      valueListenable: floatingMiniPlayerVisible,
+      builder: (context, overlayOwnsMiniPlayer, _) {
+        return BlocBuilder<StoryPlaybackCubit, StoryPlaybackState>(
+          buildWhen: _chromeChanged,
+          builder: (context, playbackState) {
+            final showMini =
+                playbackState.showMiniPlayer && !overlayOwnsMiniPlayer;
 
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: AnimatedContainer(
-              duration: _animDuration,
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                color: surface,
-                borderRadius: BorderRadius.circular(showMini ? 22 : 40),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: context.isDarkTheme ? 0.38 : 0.1,
-                    ),
-                    blurRadius: 22,
-                    offset: const Offset(0, 8),
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: AnimatedContainer(
+                  duration: _animDuration,
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: surface,
+                    borderRadius: BorderRadius.circular(showMini ? 22 : 40),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: context.isDarkTheme ? 0.38 : 0.1,
+                        ),
+                        blurRadius: 22,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedSize(
+                        duration: _animDuration,
+                        curve: Curves.easeOutCubic,
+                        alignment: Alignment.topCenter,
+                        child: showMini
+                            ? MiniPlayerBar(
+                                docked: true,
+                                state: playbackState,
+                                // Only hero-animate from the live dashboard.
+                                // Under StoryDetail/Cover routes the same tag
+                                // would still be mounted and collide on push.
+                                useHero:
+                                    ModalRoute.of(context)?.isCurrent ?? false,
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      if (showMini)
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: context.softBorder.withValues(alpha: 0.45),
+                        ),
+                      BottomNavBar(
+                        embedded: true,
+                        selectedIndex: selectedIndex,
+                        currentIndex: currentIndex,
+                        onTabSelected: onTabSelected,
+                        items: BottomNavBarItem.items,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedSize(
-                    duration: _animDuration,
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: showMini
-                        ? MiniPlayerBar(
-                            docked: true,
-                            state: playbackState,
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                  if (showMini)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: context.softBorder.withValues(alpha: 0.45),
-                    ),
-                  BottomNavBar(
-                    embedded: true,
-                    selectedIndex: selectedIndex,
-                    currentIndex: currentIndex,
-                    onTabSelected: onTabSelected,
-                    items: BottomNavBarItem.items,
-                  ),
-                ],
-              ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

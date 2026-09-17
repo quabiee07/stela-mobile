@@ -62,7 +62,7 @@ customToast(String message, [type = 1]) {
       toastType = ToastificationType.success;
       // bgColor = success50;
       // borderColor = success200;
-      iconColor = success500;
+      iconColor = success600;
       break;
     case 2:
       icon = AppIcons.alert;
@@ -83,10 +83,10 @@ customToast(String message, [type = 1]) {
 
   return toastification.show(
     type: toastType,
-    style: ToastificationStyle.fillColored,
+    style: ToastificationStyle.flatColored,
     autoCloseDuration: const Duration(seconds: 5),
-    title: Text(title, style: TextStyle(color: white, fontSize: 16, fontWeight: FontWeight.w600)),
-    description: Text(message, style: TextStyle(color: neutral600)),
+    title: Text(title, style: TextStyle(color: neutral900, fontSize: 16, fontWeight: FontWeight.w600, fontFamily: 'SFProRounded')),
+    description: Text(message, style: TextStyle(color: neutral700, fontSize: 14, fontWeight: FontWeight.w400, fontFamily: 'SFProRounded')),
     alignment: Alignment.topRight,
     direction: TextDirection.ltr,
     animationDuration: const Duration(milliseconds: 300),
@@ -100,7 +100,7 @@ customToast(String message, [type = 1]) {
         // border: Border.all(color: borderColor),
         // borderRadius: BorderRadius.circular(8),
       ),
-      child: AppIcon(icon, color: white, size: 24),
+      child: AppIcon(icon, color: iconColor, size: 26),
     ),
     showIcon: true, // show or hide the icon
     primaryColor: iconColor,
@@ -108,7 +108,8 @@ customToast(String message, [type = 1]) {
     foregroundColor: neutral700,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    borderRadius: BorderRadius.circular(4),
+    borderRadius: BorderRadius.circular(8),
+    borderSide: BorderSide(color: iconColor, width:3, ),
     boxShadow: const [
       BoxShadow(
         color: Color(0x07000000),

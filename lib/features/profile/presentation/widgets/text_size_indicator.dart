@@ -23,6 +23,7 @@ class TextSizeIndicator extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   color: muted,
+
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -32,7 +33,10 @@ class TextSizeIndicator extends StatelessWidget {
                   value: state.textSizeScale,
                   onChanged: (v) => context
                       .read<ReadingPreferencesCubit>()
-                      .setTextSizeScale(v),
+                      .previewTextSizeScale(v),
+                  onChangeEnd: (_) => context
+                      .read<ReadingPreferencesCubit>()
+                      .commitTextSizeScale(),
                 ),
               ),
               const Gap(6),
@@ -57,24 +61,34 @@ class DoubleDividerSlider extends StatelessWidget {
     super.key,
     required this.value,
     required this.onChanged,
+    this.onChangeEnd,
   });
 
   final double value;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChangeEnd;
+
+  void _updateFromLocalX(BuildContext context, double dx) {
+    final box = context.findRenderObject() as RenderBox;
+    final localX = dx.clamp(0.0, box.size.width);
+    onChanged((localX / box.size.width).clamp(0.0, 1.0));
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onHorizontalDragUpdate: (d) {
-        final box = context.findRenderObject() as RenderBox;
-        final localX = d.localPosition.dx.clamp(0.0, box.size.width);
-        onChanged((localX / box.size.width).clamp(0.0, 1.0));
+        _updateFromLocalX(context, d.localPosition.dx);
+      },
+      onHorizontalDragEnd: (_) {
+        onChangeEnd?.call(value);
       },
       onTapDown: (d) {
-        final box = context.findRenderObject() as RenderBox;
-        final localX = d.localPosition.dx.clamp(0.0, box.size.width);
-        onChanged((localX / box.size.width).clamp(0.0, 1.0));
+        _updateFromLocalX(context, d.localPosition.dx);
+      },
+      onTapUp: (_) {
+        onChangeEnd?.call(value);
       },
       child: SizedBox(
         height: 40,

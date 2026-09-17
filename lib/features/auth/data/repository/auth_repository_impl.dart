@@ -18,7 +18,9 @@ import 'package:stela_mobile/features/auth/data/services/firebase_auth_service.d
 import 'package:stela_mobile/features/auth/domain/models/login_payload.dart';
 import 'package:stela_mobile/features/auth/domain/models/profile_setup_payload.dart';
 import 'package:stela_mobile/features/auth/domain/models/user_payload.dart';
+import 'package:stela_mobile/features/auth/domain/models/user_profile.dart';
 import 'package:stela_mobile/features/auth/domain/repository/auth_repository.dart';
+import 'package:stela_mobile/features/profile/domain/models/daily_reminder_payload.dart';
 
 @LazySingleton(as: AuthRepository)
 class AuthRepositoryImpl implements AuthRepository {
@@ -37,8 +39,13 @@ class AuthRepositoryImpl implements AuthRepository {
         email: payload.email,
         password: payload.password,
       );
+      if (result == null) {
+        return ApiResult.failure(
+          const UnauthorizedFailure('Sign-in failed. Please try again.'),
+        );
+      }
       await _syncUserProfileIfExists();
-      return ApiResult.success(result!);
+      return ApiResult.success(result);
     } catch (e) {
       return ApiResult.failure(mapToAppFailure(e));
     }
@@ -48,8 +55,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<ApiResult<UserCredential>> signInWithGoogle() async {
     try {
       final result = await _firebaseAuth.signInWithGoogle();
+      if (result == null) {
+        return ApiResult.failure(
+          const UnauthorizedFailure('Google sign-in was cancelled or failed.'),
+        );
+      }
       await _syncUserProfileIfExists();
-      return ApiResult.success(result!);
+      return ApiResult.success(result);
     } catch (e) {
       return ApiResult.failure(mapToAppFailure(e));
     }
@@ -79,6 +91,25 @@ class AuthRepositoryImpl implements AuthRepository {
         await _accountLocal.markOnboarded(uid, onboarded: false);
       }
       return ApiResult.success(result);
+    } catch (e) {
+      return ApiResult.failure(mapToAppFailure(e));
+    }
+  }
+
+  @override
+  Future<ApiResult<UserProfile>> getProfile() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return ApiResult.failure(const UnauthorizedFailure());
+      }
+
+      final dto = await _authApi.getProfile();
+      final existing = cachedUser ?? await getCachedUser();
+      final profile = dto.toEntity(existing: existing);
+
+      await _persistProfile(profile);
+      return ApiResult.success(profile);
     } catch (e) {
       return ApiResult.failure(mapToAppFailure(e));
     }
@@ -188,6 +219,13 @@ class AuthRepositoryImpl implements AuthRepository {
       // account; wipe active prefs when switching accounts.
       await _accountLocal.bindAccount(user.uid);
 
+      final apiProfile = await getProfile();
+      if (apiProfile.isSuccess && apiProfile.data != null) {
+        logg("Existing user profile synced from GET /auth/profile");
+        return;
+      }
+
+      // Fall back to Firestore when the REST profile is unavailable.
       final firestore = getIt.get<FirebaseFirestore>();
       final prefs = await getIt.getAsync<SharedPreferences>();
 
@@ -211,16 +249,37 @@ class AuthRepositoryImpl implements AuthRepository {
           await prefs.remove(userKey);
           await _accountLocal.markOnboarded(user.uid, onboarded: false);
           cachedUser = null;
-          logg("No Firestore profile — setup required");
+          logg("No profile — setup required");
         } else {
           // Same account with local cache but missing remote doc — still
           // treat as onboarded from local snapshot; hydrate cachedUser.
           await getCachedUser();
-          logg("No Firestore profile — using restored local account data");
+          logg("No remote profile — using restored local account data");
         }
       }
     } catch (e) {
       logg("Error syncing user profile: $e");
     }
+  }
+
+  Future<void> _persistProfile(UserProfile profile) async {
+    final prefs = await getIt.getAsync<SharedPreferences>();
+    final userDto = UserModelDto.fromEntity(profile.user);
+    await prefs.setString(userKey, jsonEncode(userDto.toJson()));
+    cachedUser = profile.user;
+    await _accountLocal.markOnboarded(profile.user.id, onboarded: true);
+    await _syncNotificationPreferences(prefs, profile.notificationPreferences);
+  }
+
+  Future<void> _syncNotificationPreferences(
+    SharedPreferences prefs,
+    DailyReminderPayload? notification,
+  ) async {
+    if (notification == null) return;
+    await prefs.setBool(
+      isReminderEnabledKey,
+      notification.dailyReminderEnabled,
+    );
+    await prefs.setInt(reminderHourKey, notification.reminderHour);
   }
 }

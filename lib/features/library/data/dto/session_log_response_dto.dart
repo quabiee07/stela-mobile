@@ -42,7 +42,15 @@ class SessionLogResponseDto {
   }
 
   factory SessionLogResponseDto.fromJson(Map<String, dynamic> json) =>
-      _$SessionLogResponseDtoFromJson(json);
+      _$SessionLogResponseDtoFromJson(_normalize(json));
+
+  static Map<String, dynamic> _normalize(Map<String, dynamic> json) {
+    return {
+      ...json,
+      'xpEarned': json['xpEarned'] ?? json['xp_earned'] ?? json['XPEarned'],
+      'totalXp': json['totalXp'] ?? json['totalXP'] ?? json['total_xp'],
+    };
+  }
 
   Map<String, dynamic> toJson() => _$SessionLogResponseDtoToJson(this);
 }

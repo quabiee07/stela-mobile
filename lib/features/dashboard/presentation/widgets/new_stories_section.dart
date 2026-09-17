@@ -101,18 +101,21 @@ class _NewStoriesSectionState extends State<NewStoriesSection> {
                 'No stories in this category yet.',
                 style: TextStyle(color: context.mutedText, fontSize: 13),
               )
-            : SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                clipBehavior: Clip.none,
-                child: Row(
-                  spacing: 16,
-                  children: filteredStories.map((story) {
+            : SizedBox(
+                height: LibraryStory.metaHeight + 150,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  clipBehavior: Clip.none,
+                  itemCount: filteredStories.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    final story = filteredStories[index];
                     return LibraryStory(
                       story: story,
                       onStoryTap: (_) => widget.onStoryTap(story),
                     );
-                  }).toList(),
+                  },
                 ),
               ),
       ],

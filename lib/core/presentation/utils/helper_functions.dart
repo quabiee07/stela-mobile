@@ -37,7 +37,16 @@ Future<UserModel?> getCachedUser() async {
     if (userString != null) {
       try {
         final userMap = jsonDecode(userString);
-        cachedUser = UserModelDto.fromJson(userMap).toEntity();
+        final loaded = UserModelDto.fromJson(userMap).toEntity();
+        final current = cachedUser;
+        // A just-logged chapter may have updated in-memory XP before disk
+        // persist finished. Don't clobber that with a stale snapshot.
+        if (current != null &&
+            current.id == loaded.id &&
+            current.stats.totalXp > loaded.stats.totalXp) {
+          return current;
+        }
+        cachedUser = loaded;
       } catch (e) {
         // ❗ Corrupted cache — clear it
         await prefs.remove(userKey);

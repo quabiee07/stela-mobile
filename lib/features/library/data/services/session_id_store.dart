@@ -8,10 +8,18 @@ import 'package:uuid/uuid.dart';
 class SessionIdStore {
   SessionIdStore()
       : _prefsFuture = getIt.getAsync<SharedPreferences>(),
-        _uuid = const Uuid();
+        _createId = _newId;
+
+  SessionIdStore.test({
+    required Future<SharedPreferences> prefs,
+    String Function()? createId,
+  })  : _prefsFuture = prefs,
+        _createId = createId ?? _newId;
 
   final Future<SharedPreferences> _prefsFuture;
-  final Uuid _uuid;
+  final String Function() _createId;
+
+  static String _newId() => const Uuid().v4();
 
   String _key(String bookId, String chapterId) =>
       'session_id_${bookId}_$chapterId';
@@ -25,7 +33,7 @@ class SessionIdStore {
     final existing = prefs.getString(key);
     if (existing != null && existing.isNotEmpty) return existing;
 
-    final sessionId = _uuid.v4();
+    final sessionId = _createId();
     await prefs.setString(key, sessionId);
     return sessionId;
   }

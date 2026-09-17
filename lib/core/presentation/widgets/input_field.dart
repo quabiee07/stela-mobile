@@ -76,7 +76,7 @@ class _InputFieldState extends TextFieldState<InputField> {
         textInputAction: widget.inputAction,
         style: theme.textTheme.labelLarge,
         inputFormatters: widget.inputFormatters ?? [],
-        cursorColor: textColorLight,
+        cursorColor: orange,
         onTapOutside: (_) {
           focus.unfocus();
         },

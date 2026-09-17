@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
 import 'package:stela_mobile/core/presentation/utils/snack_bar_utils.dart';
 import 'package:stela_mobile/core/presentation/widgets/button.dart';
+import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/core/presentation/widgets/cubit_scaffold.dart';
 import 'package:stela_mobile/core/presentation/widgets/input_field.dart';
 import 'package:stela_mobile/core/presentation/widgets/scrollable_widget.dart';
@@ -13,6 +15,7 @@ import 'package:stela_mobile/core/presentation/widgets/social_sign_up_button.dar
 import 'package:stela_mobile/features/auth/presentation/manager/auth_cubit.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/login.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/setup_account.dart';
+import 'package:stela_mobile/features/dashboard/presentation/manager/home_cubit.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/dashboard.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -37,6 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         context.pushNamedAndClear(SetupAccountScreen.id);
         showSuccess("Sign up successful! Setup your account to continue.");
       } else {
+        getIt.get<HomeCubit>().resetToHomeTab();
         context.pushNamedAndClear(DashboardScreen.id);
         showSuccess("Welcome back!");
       }
@@ -53,7 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return CubitScaffold<AuthCubit, AuthFormState>(
       create: (_) {
-        final cubit = AuthCubit();
+        final cubit = AuthCubit(mode: AuthFormMode.register);
         _effectSub?.cancel();
         _effectSub = cubit.effects.listen(_onEffect);
         return cubit;
@@ -130,6 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Button2(
                 title: state.loading ? 'Creating account...' : 'Create Account',
                 isLoading: state.loading,
+                isEnabled: state.isValidated,
                 onPressed: cubit.createAccount,
               ),
               const Gap(16),
@@ -163,8 +168,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  InkWell(
-                    onTap: () => context.pushNamed(LoginScreen.id),
+                  Clickable(
+                    onPressed: () => context.pushNamedAndClear(LoginScreen.id),
                     child: Text(
                       'Log In',
                       style: theme.textTheme.bodyMedium?.copyWith(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
+import 'package:stela_mobile/core/domain/utils/constants.dart';
 import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
 import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
 import 'package:stela_mobile/features/dashboard/domain/repository/home_repository.dart';
@@ -53,6 +54,13 @@ class HomeCubit extends Cubit<HomeState> {
 
   void setIndex(int index) => emit(state.copyWith(selectedIndex: index));
 
+  /// Clears the bottom-nav selection so a fresh session always opens on Home.
+  void resetToHomeTab() => setIndex(0);
+
+  /// Drop continue-reading / home chrome so the next login cannot show the
+  /// previous account's progress.
+  void clearSessionData() => emit(const HomeState());
+
   void openLibraryTab() => setIndex(1);
 
   Future<void> loadStories() async {
@@ -60,12 +68,16 @@ class HomeCubit extends Cubit<HomeState> {
 
     try {
       final storiesResult = await GetStoriesUseCase(_storiesRepo).invoke();
+      if (isClosed) return;
+
       final stories = storiesResult.getOrElse((error) {
         _effects.add(HomeErrorEffect(error.toString()));
         return <StorySummary>[];
       }) ?? <StorySummary>[];
 
       final continueReading = await _readingProgressService.getAll();
+      if (isClosed) return;
+
       final featuredStories = pickFeaturedStories(stories);
       final newStories = pickNewStories(
         stories: stories,
@@ -85,7 +97,7 @@ class HomeCubit extends Cubit<HomeState> {
       );
     } catch (e) {
       _effects.add(HomeErrorEffect(e.toString()));
-      emit(state.copyWith(isLoadingStories: false));
+      if (!isClosed) emit(state.copyWith(isLoadingStories: false));
     }
   }
 
@@ -93,6 +105,8 @@ class HomeCubit extends Cubit<HomeState> {
   /// re-hitting `/stories` and gamification endpoints on every minimize.
   Future<void> refreshContinueReading() async {
     final continueReading = await _readingProgressService.getAll();
+    if (isClosed) return;
+
     final merged = _mergeContinueReading(continueReading, state.stories);
     final newStories = pickNewStories(
       stories: state.stories,
@@ -140,9 +154,10 @@ class HomeCubit extends Cubit<HomeState> {
     try {
       final user = await getCachedUser();
       if (user != null) {
+        final first = user.name.split(' ').firstOrNull ?? user.name;
         emit(
           state.copyWith(
-            firstName: user.name,
+            firstName: first,
             profilePicture: user.avatarUrl,
           ),
         );
@@ -155,7 +170,12 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> getFirestoreUser() => loadUserGreeting();
 
+  String? _lastUploadedFcmToken;
+
   Future<void> saveToken() async {
+    final token = fcmToken;
+    if (token == null || token.isEmpty) return;
+    if (token == _lastUploadedFcmToken) return;
     if (state.isSavingToken) return;
     emit(state.copyWith(isSavingToken: true));
 
@@ -166,6 +186,7 @@ class HomeCubit extends Cubit<HomeState> {
     });
 
     if (value != null) {
+      _lastUploadedFcmToken = token;
       _effects.add(HomeTokenSavedEffect(value.toString()));
     }
     emit(state.copyWith(isSavingToken: false));

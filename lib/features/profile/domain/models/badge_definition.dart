@@ -1,3 +1,4 @@
+import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/features/auth/domain/models/user_model.dart';
 import 'package:stela_mobile/features/profile/domain/models/user_badge.dart';
 
@@ -8,12 +9,20 @@ class BadgeDefinition {
     required this.icon,
     required this.description,
     required this.target,
+    this.asset = '',
+    this.requirementLabel = '',
   });
 
   final String id;
   final String name;
   final String icon;
   final String description;
+
+  /// Hexagonal illustration asset. Empty when only the emoji fallback exists.
+  final String asset;
+
+  /// Small caption shown above the name on the profile grid (e.g. "5 Books").
+  final String requirementLabel;
 
   /// Progress target for the related stat (1 = binary unlock).
   final int target;
@@ -47,94 +56,142 @@ class BadgeProgress {
 abstract final class BadgeCatalog {
   static const List<BadgeDefinition> all = [
     BadgeDefinition(
-      id: 'book_worm',
-      name: 'Book Worm',
-      icon: '📚',
-      description: 'Read 3 days in a row',
-      target: 3,
-    ),
-    BadgeDefinition(
-      id: 'streak_king',
-      name: 'Streak King',
-      icon: '👑',
-      description: 'Keep a 7-day streak',
-      target: 7,
-    ),
-    BadgeDefinition(
-      id: 'star_reader',
-      name: 'Star Reader',
-      icon: '⭐',
-      description: 'Finish 5 stories',
-      target: 5,
-    ),
-    BadgeDefinition(
       id: 'dragon_tamer',
       name: 'Dragon Tamer',
       icon: '🐉',
-      description: 'Finish a fantasy story',
+      asset: badgeDragonTamer,
+      requirementLabel: '5 Books',
+      description:
+          'You finished a fantasy story. The dragons have officially accepted you.',
       target: 1,
-    ),
-    BadgeDefinition(
-      id: 'audio_fan',
-      name: 'Audio Fan',
-      icon: '🎧',
-      description: 'Finish 3 stories with audio',
-      target: 3,
     ),
     BadgeDefinition(
       id: 'night_owl',
       name: 'Night Owl',
       icon: '🦉',
-      description: 'Read after 8pm',
+      asset: badgeNightOwl,
+      requirementLabel: '5 Books',
+      description: 'You read after 8pm. The moon is keeping you company.',
       target: 1,
     ),
     BadgeDefinition(
-      id: 'midnight_reader',
-      name: 'Midnight Reader',
-      icon: '🌙',
-      description: 'Read after 8pm five times',
+      id: 'book_worm',
+      name: 'Book Worm',
+      icon: '📚',
+      asset: badgeBookWorm,
+      requirementLabel: '5 Books',
+      description:
+          '5 books down! Your brain is officially leveling up. Worms everywhere are proud of you.',
       target: 5,
+    ),
+    BadgeDefinition(
+      id: 'audio_fan',
+      name: 'Audio Fan',
+      icon: '🎧',
+      asset: badgeAudioFan,
+      requirementLabel: '5 Books',
+      description:
+          'You finished 3 stories with audio. Your ears are in on the adventure too.',
+      target: 3,
     ),
     BadgeDefinition(
       id: 'explorer',
       name: 'Explorer',
       icon: '🧭',
-      description: 'Try 4 different genres',
+      asset: badgeExplorer,
+      requirementLabel: '5 Books',
+      description:
+          'You tried 4 different genres. The map keeps getting bigger.',
       target: 4,
     ),
     BadgeDefinition(
-      id: 'speed_reader',
-      name: 'Speed Reader',
-      icon: '⚡',
-      description: 'Finish 3 chapters at 1.5x+',
-      target: 3,
-    ),
-    BadgeDefinition(
-      id: 'ocean_explorer',
-      name: 'Ocean Explorer',
-      icon: '🌊',
-      description: 'Finish an ocean story',
-      target: 1,
-    ),
-    BadgeDefinition(
-      id: 'scifi_pioneer',
-      name: 'Sci-Fi Pioneer',
+      id: 'sci_fi_reader',
+      name: 'Sci-Fi Reader',
       icon: '🚀',
-      description: 'Finish a sci-fi story',
+      asset: badgeSciFiReader,
+      requirementLabel: '5 Books',
+      description:
+          'You finished a sci-fi story. Space is now part of your bookshelf.',
       target: 1,
     ),
     BadgeDefinition(
-      id: 'social_butterfly',
-      name: 'Social Butterfly',
-      icon: '🦋',
-      description: 'Share your progress 3 times',
+      id: 'streak_king',
+      name: 'Streak King',
+      icon: '👑',
+      asset: badgeStreakKing,
+      requirementLabel: '5 Books',
+      description: 'Seven days in a row. The crown fits — keep showing up.',
+      target: 7,
+    ),
+    BadgeDefinition(
+      id: 'first_light',
+      name: 'First Light',
+      icon: '☀️',
+      asset: badgeFirstLight,
+      requirementLabel: '5 Books',
+      description: 'You started your first story. Every reader begins here.',
+      target: 1,
+    ),
+    BadgeDefinition(
+      id: 'fast_reader',
+      name: 'Fast Reader',
+      icon: '⚡',
+      asset: badgeFastReader,
+      requirementLabel: '5 Books',
+      description: 'You finished 3 chapters at 1.5x or faster. Zoom!',
       target: 3,
+    ),
+    BadgeDefinition(
+      id: 'one_sitting',
+      name: 'One Sitting',
+      icon: '📖',
+      asset: badgeOneSitting,
+      requirementLabel: '5 Books',
+      description:
+          'You finished a whole story in one go. No cliffhangers left behind.',
+      target: 1,
+    ),
+    BadgeDefinition(
+      id: 'passport',
+      name: 'Passport',
+      icon: '🌊',
+      asset: badgePassport,
+      requirementLabel: '5 Books',
+      description:
+          'You finished an ocean story. Stamps collected, horizons widened.',
+      target: 1,
+    ),
+    BadgeDefinition(
+      id: 'night_reader',
+      name: 'Night Reader',
+      icon: '🌙',
+      asset: badgeNightReader,
+      requirementLabel: '5 Books',
+      description: 'Five late-night sessions. The stars saved you a seat.',
+      target: 5,
     ),
   ];
 
+  /// Legacy API ids → current catalog ids.
+  static const Map<String, String> _aliases = {
+    'scifi_pioneer': 'sci_fi_reader',
+    'sci_fi_pioneer': 'sci_fi_reader',
+    'midnight_reader': 'night_reader',
+    'speed_reader': 'fast_reader',
+    'star_reader': 'book_worm',
+    'ocean_explorer': 'passport',
+    'social_butterfly': 'explorer',
+  };
+
+  static String canonicalId(String id) {
+    final normalized = id.trim().replaceAll('-', '_');
+    return _aliases[normalized] ?? normalized;
+  }
+
   static BadgeDefinition? find(String id) {
+    final canonical = canonicalId(id);
     for (final badge in all) {
-      if (badge.id == id) return badge;
+      if (badge.id == canonical) return badge;
     }
     return null;
   }
@@ -142,30 +199,30 @@ abstract final class BadgeCatalog {
   static int progressFor(String id, UserModel? user, {int? currentStreak}) {
     if (user == null) return 0;
     final stats = user.stats;
-    switch (id) {
+    switch (canonicalId(id)) {
       case 'book_worm':
-        return currentStreak ?? user.streakData.currentStreakDays;
+        return stats.storiesRead;
       case 'streak_king':
         return currentStreak ?? user.streakData.currentStreakDays;
-      case 'star_reader':
-        return stats.storiesRead;
       case 'dragon_tamer':
         return stats.fantasyBooksCompleted;
       case 'audio_fan':
         return stats.audioBooksCompleted;
       case 'night_owl':
-      case 'midnight_reader':
+        return stats.sessionsAfter8Pm > 0 ? 1 : 0;
+      case 'night_reader':
         return stats.sessionsAfter8Pm;
       case 'explorer':
         return stats.genresRead.length;
-      case 'speed_reader':
+      case 'fast_reader':
         return stats.chaptersAtSpeed;
-      case 'ocean_explorer':
+      case 'passport':
         return stats.oceanBooksCompleted;
-      case 'scifi_pioneer':
+      case 'sci_fi_reader':
         return stats.scifiBooksCompleted;
-      case 'social_butterfly':
-        return stats.sharesCompleted;
+      case 'first_light':
+      case 'one_sitting':
+        return stats.storiesRead;
       default:
         return 0;
     }
@@ -176,18 +233,27 @@ abstract final class BadgeCatalog {
     UserModel? user,
     int? currentStreak,
   }) {
-    final byId = {for (final b in unlocked) b.badgeId: b};
-    return all.map((def) {
-      final earned = byId[def.id];
-      final current = progressFor(def.id, user, currentStreak: currentStreak);
-      final isUnlocked = earned != null || current >= def.target;
-      return BadgeProgress(
-        definition: def,
-        current: current.clamp(0, def.target),
-        unlocked: isUnlocked,
-        seen: earned?.seen ?? false,
-        unlockedAt: earned?.unlockedAt?.toDateTime(),
-      );
-    }).toList(growable: false);
+    final byId = <String, UserBadge>{};
+    for (final badge in unlocked) {
+      byId[canonicalId(badge.badgeId)] = badge;
+    }
+    return all
+        .map((def) {
+          final earned = byId[def.id];
+          final current = progressFor(
+            def.id,
+            user,
+            currentStreak: currentStreak,
+          );
+          final isUnlocked = earned != null || current >= def.target;
+          return BadgeProgress(
+            definition: def,
+            current: current.clamp(0, def.target),
+            unlocked: isUnlocked,
+            seen: earned?.seen ?? false,
+            unlockedAt: earned?.unlockedAt?.toDateTime(),
+          );
+        })
+        .toList(growable: false);
   }
 }

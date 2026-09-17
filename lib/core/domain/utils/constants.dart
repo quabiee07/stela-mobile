@@ -22,6 +22,9 @@ String isReminderEnabledKey = 'isReminderEnabled';
 String reminderHourKey = 'reminderHour';
 String naira = '₦';
 
-const stelaBaseUrl = "https://stela-mobile.web.app/api/";
+const stelaBaseUrl = String.fromEnvironment(
+  'STELA_BASE_URL',
+  defaultValue: 'https://stela-mobile.web.app/api/',
+);
 String? fcmToken;
 String region = "";

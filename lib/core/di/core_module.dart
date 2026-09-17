@@ -1,6 +1,8 @@
 import 'package:awesome_dio_interceptor/awesome_dio_interceptor.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,8 +31,12 @@ abstract class CoreModule {
         },
       ),
     );
-    dio.interceptors.add(AuthInterceptor(tokenStorage: tokenStorage));
-    dio.interceptors.add(AwesomeDioInterceptor());
+    final auth = AuthInterceptor(tokenStorage: tokenStorage);
+    dio.interceptors.add(auth);
+    auth.attach(dio);
+    if (kDebugMode) {
+      dio.interceptors.add(AwesomeDioInterceptor());
+    }
     return dio;
   }
 
@@ -39,6 +45,8 @@ abstract class CoreModule {
   }
 
   FirebaseFirestore firestore() => FirebaseFirestore.instance;
+
+  FirebaseStorage storage() => FirebaseStorage.instance;
 
   SessionService get sessionService =>
       SessionService(getIt.get<Dio>(), baseUrl: stelaBaseUrl);

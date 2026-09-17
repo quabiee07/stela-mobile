@@ -58,6 +58,7 @@ class ReadingPreferencesCubit extends Cubit<ReadingPreferencesState> {
 
   Future<void> _load() async {
     final prefs = await _prefs;
+    if (isClosed) return;
     final speed = prefs.getDouble(textSpeedKey) ?? 1.0;
     final sizeScale = prefs.getDouble(textSizeScaleKey) ?? 0.5;
     emit(
@@ -89,9 +90,20 @@ class ReadingPreferencesCubit extends Cubit<ReadingPreferencesState> {
   }
 
   Future<void> setTextSizeScale(double scale) async {
+    previewTextSizeScale(scale);
+    await commitTextSizeScale();
+  }
+
+  /// UI-only update while dragging the text-size control.
+  void previewTextSizeScale(double scale) {
     final clamped = scale.clamp(0.0, 1.0);
+    if (state.textSizeScale == clamped) return;
     emit(state.copyWith(textSizeScale: clamped));
+  }
+
+  /// Persist the current text-size scale (call on drag end / tap).
+  Future<void> commitTextSizeScale() async {
     final prefs = await _prefs;
-    await prefs.setDouble(textSizeScaleKey, clamped);
+    await prefs.setDouble(textSizeScaleKey, state.textSizeScale);
   }
 }

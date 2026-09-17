@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
+import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/utils/custom_state.dart';
@@ -16,6 +17,7 @@ import 'package:stela_mobile/features/auth/presentation/screens/pages/age_page.d
 import 'package:stela_mobile/features/auth/presentation/screens/pages/name_page.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/pages/story_type_page.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/pages/voice_page.dart';
+import 'package:stela_mobile/features/dashboard/presentation/manager/home_cubit.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/dashboard.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/success_screen.dart';
 
@@ -32,16 +34,12 @@ class _SetupAccountScreenState extends CustomState<SetupAccountScreen> {
   final _controller = PageController(initialPage: 0);
   StreamSubscription<SetupEffect>? _effectsSub;
 
-  final pages = const [
-    NamePage(),
-    AgePage(),
-    StoryTypePage(),
-    VoicePage(),
-  ];
+  final pages = const [NamePage(), AgePage(), StoryTypePage(), VoicePage()];
 
   @override
   void dispose() {
     _effectsSub?.cancel();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -56,7 +54,7 @@ class _SetupAccountScreenState extends CustomState<SetupAccountScreen> {
           switch (event) {
             case SetupErrorEffect(:final message):
               showError(message);
-            case SetupCompleteEffect(:final result):
+            case SetupCompleteEffect():
               context.push(
                 SuccessScreen(
                   image: pinkCheck,
@@ -65,6 +63,7 @@ class _SetupAccountScreenState extends CustomState<SetupAccountScreen> {
                       'Dear hero your stories are being\nprepared for you, see you at home',
                   buttonText: 'Go to Home',
                   onPressed: () {
+                    getIt.get<HomeCubit>().resetToHomeTab();
                     context.pushNamedAndClear(DashboardScreen.id);
                   },
                 ),
@@ -123,8 +122,19 @@ class _SetupAccountScreenState extends CustomState<SetupAccountScreen> {
                       ? 'Complete'
                       : 'Continue',
                   isLoading: state.isSubmitting,
+                  isEnabled: currentIndex == pages.length - 1
+                      ? state.canComplete
+                      : state.canAdvanceFromPage(currentIndex),
                   onPressed: () {
                     if (currentIndex < pages.length - 1) {
+                      if (!state.canAdvanceFromPage(currentIndex)) {
+                        showError(
+                          currentIndex == 0
+                              ? 'Please enter your name to continue.'
+                              : 'Please enter a valid age (5–120).',
+                        );
+                        return;
+                      }
                       _controller.nextPage(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeIn,

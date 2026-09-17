@@ -44,7 +44,8 @@ class StoryReadingContext {
     return chapters[nextIndex];
   }
 
-  bool get isLastChapter => currentChapterIndex >= chapters.length - 1;
+  bool get isLastChapter =>
+      chapters.isEmpty ? false : currentChapterIndex >= chapters.length - 1;
 
   String get currentChapterImageUrl {
     if (chapters.isEmpty) return coverImageUrl;

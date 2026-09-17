@@ -4,13 +4,14 @@ import 'package:stela_mobile/features/library/domain/models/story_detail.dart';
 import 'package:stela_mobile/features/library/domain/repository/stories_repository.dart';
 
 class GetStoryDetailUseCase implements UseCase<StoryDetail, String> {
-  final StoriesRepository _repository;
+  GetStoryDetailUseCase(this._repository, {this.force = false});
 
-  GetStoryDetailUseCase(this._repository);
+  final StoriesRepository _repository;
+  final bool force;
 
   @override
   Future<ApiResult<StoryDetail>> invoke() {
-    return _repository.getStoryDetail(param);
+    return _repository.getStoryDetail(param, force: force);
   }
 
   @override

@@ -40,7 +40,7 @@ class WeeklyActivityStore {
 
   Future<void> _persist(Map<String, int> counts) async {
     // Keep only recent days so storage stays small.
-    final cutoff = DateTime.now().subtract(const Duration(days: 45));
+    final cutoff = DateTime.now().subtract(const Duration(days: 400));
     counts.removeWhere((key, _) {
       final date = DateTime.tryParse(key);
       return date == null || date.isBefore(cutoff);

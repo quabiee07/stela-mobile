@@ -9,10 +9,10 @@ import '../../di/core_module_container.dart';
 class ThemeProvider extends CustomProvider with AppTheme {
   final _pref = getIt.getAsync<SharedPreferences>();
   bool isDark = true;
-  ThemeOptions currentTheme = ThemeOptions.dark;
+  ThemeOptions currentTheme = ThemeOptions.light;
   late ThemeData theme = lightTheme();
   late ThemeData darkThemeData = darkTheme();
-  ThemeMode themeMode = ThemeMode.dark;
+  ThemeMode themeMode = ThemeMode.light;
 
   ThemeProvider() {
     _pref.then((_) => getTheme());
@@ -20,9 +20,9 @@ class ThemeProvider extends CustomProvider with AppTheme {
 
   void getTheme() {
     _pref.then((value) {
-      final themePref = value.getString(_themeKey) ?? 'Dark';
+      final themePref = value.getString(_themeKey) ?? 'Light';
       currentTheme =
-          CustomThemeMode.customThemes[themePref]?.value ?? ThemeOptions.dark;
+          CustomThemeMode.customThemes[themePref]?.value ?? ThemeOptions.light;
       setTheme();
     });
   }

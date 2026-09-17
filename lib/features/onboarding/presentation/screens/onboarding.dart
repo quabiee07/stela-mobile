@@ -131,8 +131,8 @@ class _OnboardingScreenState extends CustomState<OnboardingScreen>
                                 height: 5,
                                 decoration: BoxDecoration(
                                   color: onboardingState.currentIndex == index
-                                      ? Colors.black
-                                      : theme.colorScheme.surface,
+                                      ? white
+                                      : Colors.black,
                                   borderRadius: BorderRadius.circular(100),
                                 ),
                               ),
@@ -188,6 +188,7 @@ class _OnboardingScreenState extends CustomState<OnboardingScreen>
                                     return SocialSignUpButton(
                                       isGoogle: true,
                                       text: 'Get started with Google',
+                                      color: Colors.white,
                                       isLoading: authState.googleLoading,
                                       onTap: () {
                                         authCubit.signInWithGoogle();

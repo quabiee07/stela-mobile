@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
+import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 
 class StatsCard extends StatelessWidget {
   const StatsCard({
     super.key,
-    required this.emoji,
+    required this.asset,
     required this.value,
     required this.label,
   });
-  final String emoji;
+  final String asset;
   final String value;
   final String label;
 
@@ -20,7 +21,7 @@ class StatsCard extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 22)),
+          CustomImage(asset: asset, width: 35, height: 35, fit: BoxFit.cover),
           const Gap(6),
           Text(
             value,

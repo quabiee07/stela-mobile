@@ -24,6 +24,7 @@ class AppIcon extends StatelessWidget {
       size: size,
       color: color ?? IconTheme.of(context).color ?? Colors.black,
       strokeWidth: strokeWidth,
+      
     );
   }
 }

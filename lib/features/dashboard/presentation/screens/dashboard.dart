@@ -11,6 +11,7 @@ import 'package:stela_mobile/features/dashboard/presentation/screens/home.dart';
 import 'package:stela_mobile/features/library/presentation/screens/library.dart';
 import 'package:stela_mobile/features/library/presentation/widgets/playback_dock.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_cubit.dart';
+import 'package:stela_mobile/features/profile/presentation/manager/profile_cubit.dart';
 import 'package:stela_mobile/features/profile/presentation/screens/profile.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -25,6 +26,7 @@ class _DashboardScreenState extends CustomState<DashboardScreen> {
   HomeCubit? _homeCubit;
   StreamSubscription<HomeEffect>? _homeEffectsSub;
   StreamSubscription<GamificationEffect>? _gamificationEffectsSub;
+  StreamSubscription<String>? _fcmTokenSub;
   late final List<Widget> _screens;
   bool _didWarmSecondary = false;
 
@@ -62,6 +64,7 @@ class _DashboardScreenState extends CustomState<DashboardScreen> {
   void dispose() {
     _homeEffectsSub?.cancel();
     _gamificationEffectsSub?.cancel();
+    _fcmTokenSub?.cancel();
     super.dispose();
   }
 
@@ -72,16 +75,23 @@ class _DashboardScreenState extends CustomState<DashboardScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     if (!mounted) return;
 
+    unawaited(context.read<ProfileCubit>().loadProfile(showLoading: false));
+    unawaited(context.read<HomeCubit>().loadUserGreeting());
     unawaited(context.read<GamificationCubit>().loadGamification());
 
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
 
-    unawaited(
-      NotificationService().init().then((_) {
-        if (mounted) _homeCubit?.saveToken();
-      }),
-    );
+    unawaited(_registerPushToken());
+  }
+
+  Future<void> _registerPushToken() async {
+    final notifications = NotificationService();
+    _fcmTokenSub ??= notifications.tokenUpdates.listen((_) {
+      _homeCubit?.saveToken();
+    });
+    await notifications.init();
+    if (mounted) _homeCubit?.saveToken();
   }
 
   @override
@@ -110,7 +120,10 @@ class _DashboardScreenState extends CustomState<DashboardScreen> {
               onTabSelected: (index) {
                 context.read<HomeCubit>().setIndex(index);
                 if (index == 2) {
-                  context.read<GamificationCubit>().loadGamification();
+                  unawaited(context.read<ProfileCubit>().loadProfile());
+                  unawaited(
+                    context.read<GamificationCubit>().loadGamification(),
+                  );
                 }
               },
             ),

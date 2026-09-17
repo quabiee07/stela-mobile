@@ -1,15 +1,15 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:device_info_plus/device_info_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:stela_mobile/core/domain/utils/constants.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:timezone/timezone.dart';
 
 class NotificationService {
-  late final FirebaseMessaging _firebaseMessaging;
   static final NotificationService _instance = NotificationService._internal();
 
   factory NotificationService() {
@@ -18,95 +18,141 @@ class NotificationService {
 
   NotificationService._internal();
 
-  Future<void> setupAPNS() async {
-    String? apnsToken = await _firebaseMessaging.getAPNSToken();
-    int attempts = 0;
-    while (apnsToken == null && attempts < 10) {
-      // 5 → 10
-      await Future.delayed(const Duration(seconds: 2)); // 1s → 2s
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final _tokenUpdates = StreamController<String>.broadcast();
+  StreamSubscription<String>? _tokenRefreshSub;
+  bool _initialized = false;
+
+  /// Emits whenever a non-empty FCM token is obtained or refreshed.
+  Stream<String> get tokenUpdates => _tokenUpdates.stream;
+
+  bool _canReceivePush(AuthorizationStatus status) {
+    return status == AuthorizationStatus.authorized ||
+        status == AuthorizationStatus.provisional;
+  }
+
+  Future<String?> _waitForApnsToken() async {
+    if (!Platform.isIOS) return null;
+
+    var apnsToken = await _firebaseMessaging.getAPNSToken();
+    if (apnsToken != null) return apnsToken;
+
+    for (var attempt = 1; attempt <= 20; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
       apnsToken = await _firebaseMessaging.getAPNSToken();
-      attempts++;
-      debugPrint(
-        "APNS attempt $attempts: ${apnsToken != null ? '✅ resolved' : '⏳ null'}",
-      );
+      if (apnsToken != null) return apnsToken;
     }
-    if (apnsToken == null) {
-      debugPrint("⚠️ APNS token still null after $attempts attempts");
+
+    debugPrint('APNS token unavailable after waiting');
+    return null;
+  }
+
+  Future<String?> _readFcmToken() async {
+    for (var attempt = 1; attempt <= 5; attempt++) {
+      try {
+        final token = await _firebaseMessaging.getToken();
+        if (token != null && token.isNotEmpty) return token;
+      } on FirebaseException catch (e) {
+        debugPrint('FCM getToken attempt $attempt failed: ${e.code}');
+      } catch (e) {
+        debugPrint('FCM getToken attempt $attempt failed');
+      }
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+    return null;
+  }
+
+  void _storeToken(String token) {
+    if (token.isEmpty || token == fcmToken) return;
+    fcmToken = token;
+    _tokenUpdates.add(token);
+  }
+
+  Future<String?> setupAPNS() async {
+    if (!Platform.isIOS) return null;
+
+    try {
+      final settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      if (!_canReceivePush(settings.authorizationStatus)) {
+        debugPrint('Notification permission not granted');
+        return null;
+      }
+
+      return _waitForApnsToken();
+    } catch (e) {
+      debugPrint('APNS setup failed');
+      return null;
     }
   }
 
   Future<String?> getToken() async {
     try {
-      if (!Platform.isAndroid) {
-        final iosInfo = await DeviceInfoPlugin().iosInfo;
-        if (!iosInfo.isPhysicalDevice) {
-          fcmToken = "simulator_dummy_token";
-          return fcmToken;
-        }
-        await setupAPNS();
-
-        // Don't proceed if APNS never resolved
-        if (await _firebaseMessaging.getAPNSToken() == null) {
-          debugPrint("❌ Aborting getToken — APNS unavailable");
+      if (Platform.isIOS) {
+        final apnsToken = await setupAPNS();
+        if (apnsToken == null) {
+          debugPrint('Cannot get FCM token because APNS is unavailable');
           return null;
         }
       }
-      fcmToken = await _firebaseMessaging.getToken();
-      return fcmToken;
-    } on IOException catch (e) {
-      debugPrint(
-        "Error getting FCM token: $e. Device info: ${await DeviceInfoPlugin().deviceInfo}",
-      );
+
+      final token = await _readFcmToken();
+      if (token == null) {
+        debugPrint('Firebase returned an empty FCM token');
+        return null;
+      }
+
+      _storeToken(token);
+      return token;
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase error getting FCM token: ${e.code}');
       return null;
     } catch (e) {
-      debugPrint("Unexpected error getting FCM token: $e");
+      debugPrint('Unexpected error getting FCM token');
       return null;
     }
   }
 
-  // Future<String?> getToken() async {
-  //   try {
-  //     if (!Platform.isAndroid) {
-  //       final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-  //       final iosInfo = await deviceInfo.iosInfo;
-  //       if (!iosInfo.isPhysicalDevice) {
-  //         fcmToken = "simulator_dummy_token";
-  //         return fcmToken;
-  //       }
-  //       await setupAPNS();
-  //     }
-  //     fcmToken = await _firebaseMessaging.getToken();
-  //     return fcmToken;
-  //   } on IOException catch (e) {
-  //     debugPrint(
-  //       "Error getting FCM token: $e. Device info: ${await DeviceInfoPlugin().deviceInfo}",
-  //     );
-  //     return null;
-  //   } catch (e) {
-  //     debugPrint("Unexpected error getting FCM token: $e");
-  //     return null;
-  //   }
-  // }
-
   Future<void> init() async {
-    TimezoneInfo currentTimeZone = await FlutterTimezone.getLocalTimezone();
-    _firebaseMessaging = FirebaseMessaging.instance;
-
-    initializeTimeZones();
+    final currentTimeZone = await FlutterTimezone.getLocalTimezone();
     region = currentTimeZone.identifier;
-    setLocalLocation(getLocation(currentTimeZone.identifier));
 
-    final settings = await _firebaseMessaging.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      await getToken();
+    if (!_initialized) {
+      initializeTimeZones();
+      setLocalLocation(getLocation(currentTimeZone.identifier));
+
+      final settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      _tokenRefreshSub ??= _firebaseMessaging.onTokenRefresh.listen((token) {
+        if (token.isEmpty) return;
+        _storeToken(token);
+      });
+
+      _initialized = true;
+
+      if (!_canReceivePush(settings.authorizationStatus)) {
+        return;
+      }
     }
+
+    await getToken();
+  }
+
+  Future<void> dispose() async {
+    await _tokenRefreshSub?.cancel();
+    _tokenRefreshSub = null;
   }
 }

@@ -68,6 +68,12 @@ class _BottomNavBarState extends State<BottomNavBar>
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final items = List.generate(widget.items!.length, (int index) {

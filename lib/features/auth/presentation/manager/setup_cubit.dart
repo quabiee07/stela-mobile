@@ -29,10 +29,30 @@ class SetupState extends Equatable {
   final bool isSubmitting;
 
   ProfileSetupPayload get profileSetupPayload => ProfileSetupPayload(
-        name: name,
+        name: name.trim(),
         age: int.tryParse(age) ?? 0,
         storyPreferences: favouriteGenres,
       );
+
+  bool get isNameValid => name.trim().isNotEmpty;
+
+  bool get isAgeValid {
+    final parsed = int.tryParse(age.trim());
+    return parsed != null && parsed >= 5 && parsed <= 120;
+  }
+
+  bool get canComplete => isNameValid && isAgeValid;
+
+  bool canAdvanceFromPage(int pageIndex) {
+    switch (pageIndex) {
+      case 0:
+        return isNameValid;
+      case 1:
+        return isAgeValid;
+      default:
+        return true;
+    }
+  }
 
   SetupState copyWith({
     String? name,
@@ -108,6 +128,12 @@ class SetupCubit extends Cubit<SetupState> {
 
   Future<void> completeOnboarding() async {
     if (state.isSubmitting) return;
+    if (!state.canComplete) {
+      _effects.add(
+        const SetupErrorEffect('Please enter a valid name and age.'),
+      );
+      return;
+    }
     emit(state.copyWith(isSubmitting: true));
 
     final result = await SetupProfileUseCase(
@@ -119,6 +145,8 @@ class SetupCubit extends Cubit<SetupState> {
       _effects.add(SetupErrorEffect(error.toString()));
       return null;
     });
+
+    if (isClosed) return;
 
     if (value != null) {
       await _repo.saveUserProfile(state.profileSetupPayload);
@@ -132,7 +160,7 @@ class SetupCubit extends Cubit<SetupState> {
       _effects.add(SetupCompleteEffect(value));
     }
 
-    emit(state.copyWith(isSubmitting: false));
+    if (!isClosed) emit(state.copyWith(isSubmitting: false));
   }
 
   @override

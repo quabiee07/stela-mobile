@@ -6,6 +6,7 @@ import 'package:stela_mobile/core/domain/utils/constants.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
 import 'package:stela_mobile/features/auth/domain/models/user_model.dart';
+import 'package:stela_mobile/features/auth/domain/models/user_profile.dart';
 import 'package:stela_mobile/features/library/domain/models/session_log_result.dart';
 import 'package:stela_mobile/features/profile/data/services/weekly_activity_store.dart';
 import 'package:stela_mobile/features/profile/domain/models/badge_definition.dart';
@@ -85,31 +86,119 @@ class GamificationCubit extends Cubit<GamificationState> {
   }
 
   List<BadgeProgress> get badgeProgress => BadgeCatalog.buildProgress(
-        unlocked: state.badges,
-        user: cachedUser,
-        currentStreak: state.streakInfo?.currentStreak,
-      );
+    unlocked: state.badges,
+    user: cachedUser,
+    currentStreak: state.streakInfo?.currentStreak,
+  );
 
   StreakDataModel? get streakDataForDisplay {
     return GamificationDisplay.streakDataForDisplay(
       currentStreak: state.streakInfo?.currentStreak,
       freezeAvailable: state.streakInfo?.freezeAvailable,
       freezeActivatedDate: state.streakInfo?.freezeActivatedDate,
-      lastReadDate: state.streakInfo?.lastReadDate ??
-          cachedUser?.lastReadDate?.toIso8601String().split('T').first,
+      lastReadDate: _lastReadDateKey,
       localFallback: cachedUser?.streakData,
       sessionCountsByDay: state.sessionCountsByDay,
       weeklySessionCounts: state.streakInfo?.weeklySessionCounts,
     );
   }
 
+  String? get _lastReadDateKey =>
+      state.streakInfo?.lastReadDate ??
+      cachedUser?.lastReadDate?.toIso8601String().split('T').first;
+
+  Set<DateTime> get activeStreakDates => GamificationDisplay.activeStreakDays(
+    currentStreak:
+        state.streakInfo?.currentStreak ??
+        cachedUser?.streakData.currentStreakDays ??
+        0,
+    lastReadDate: _lastReadDateKey,
+    sessionCountsByDay: state.sessionCountsByDay,
+    weeklySessionCounts: state.streakInfo?.weeklySessionCounts,
+  );
+
+  List<bool> get thisWeekCompleted => GamificationDisplay.thisWeekCompleted(
+    currentStreak:
+        state.streakInfo?.currentStreak ??
+        cachedUser?.streakData.currentStreakDays ??
+        0,
+    lastReadDate: _lastReadDateKey,
+    sessionCountsByDay: state.sessionCountsByDay,
+    weeklySessionCounts: state.streakInfo?.weeklySessionCounts,
+  );
+
   String badgeIcon(String badgeId) =>
       BadgeCatalog.find(badgeId)?.icon ??
       GamificationDisplay.badgeIcon(badgeId);
 
+  String badgeAsset(String badgeId) => BadgeCatalog.find(badgeId)?.asset ?? '';
+
+  String badgeDescription(String badgeId) =>
+      BadgeCatalog.find(badgeId)?.description ??
+      'You unlocked a new badge. Keep reading to earn more.';
+
   String badgeName(String badgeId) =>
       BadgeCatalog.find(badgeId)?.name ??
       GamificationDisplay.badgeName(badgeId);
+
+  /// Wipe in-memory XP / read time / streaks so the next account cannot inherit
+  /// the previous session's gamification state.
+  void resetForLogout() {
+    _locallySeenBadges.clear();
+    emit(const GamificationState());
+  }
+
+  /// Re-read [cachedUser] + weekly activity after login / account bind.
+  void hydrateFromCache() {
+    _bootstrapFromCache();
+    unawaited(
+      _weeklyActivity.load().then((counts) {
+        if (!isClosed) emit(state.copyWith(sessionCountsByDay: counts));
+      }),
+    );
+  }
+
+  /// Apply identity + XP/streak fields from `GET /auth/profile`.
+  void applyFromProfile(UserProfile profile) {
+    final user = profile.user;
+    final totalXp = LevelProgress.preferXp(
+      user.stats.totalXp,
+      state.totalXp > (cachedUser?.stats.totalXp ?? 0)
+          ? state.totalXp
+          : (cachedUser?.stats.totalXp ?? 0),
+    );
+    final storiesRead = LevelProgress.preferXp(
+      user.stats.storiesRead,
+      state.storiesRead > (cachedUser?.stats.storiesRead ?? 0)
+          ? state.storiesRead
+          : (cachedUser?.stats.storiesRead ?? 0),
+    );
+    final cachedHours = cachedUser?.stats.readTimeHours ?? 0;
+    final readTimeHours = [
+      user.stats.readTimeHours,
+      state.readTimeHours,
+      cachedHours,
+    ].reduce((a, b) => a > b ? a : b);
+    final derivedLevel = LevelProgress.levelFromXp(totalXp);
+    final level = user.level > derivedLevel ? user.level : derivedLevel;
+
+    emit(
+      state.copyWith(
+        streakInfo: profile.streak,
+        totalXp: totalXp,
+        level: level,
+        levelProgressFraction: LevelProgress.fraction(totalXp),
+        storiesRead: storiesRead,
+        readTimeHours: readTimeHours,
+      ),
+    );
+    _syncCachedUserXpAndStreak();
+    unawaited(
+      _weeklyActivity.load().then((counts) {
+        if (!isClosed) emit(state.copyWith(sessionCountsByDay: counts));
+      }),
+    );
+  }
 
   Future<void> loadGamification() async {
     emit(state.copyWith(isLoading: true));
@@ -126,7 +215,8 @@ class GamificationCubit extends Cubit<GamificationState> {
       return null;
     });
 
-    final badges = items
+    final badges =
+        items
             ?.map(
               (b) => UserBadge(
                 badgeId: b.badgeId,
@@ -146,14 +236,15 @@ class GamificationCubit extends Cubit<GamificationState> {
     final derivedLevel = LevelProgress.levelFromXp(totalXp);
     final level = cachedLevel > derivedLevel ? cachedLevel : derivedLevel;
     final cachedStories = cachedUser?.stats.storiesRead ?? 0;
-    final storiesRead =
-        cachedStories > state.storiesRead ? cachedStories : state.storiesRead;
+    final storiesRead = cachedStories > state.storiesRead
+        ? cachedStories
+        : state.storiesRead;
     final cachedReadHours = cachedUser?.stats.readTimeHours ?? 0;
     final readTimeHours = cachedReadHours > state.readTimeHours
         ? cachedReadHours
         : state.readTimeHours;
-    final levelProgressFraction = totalXp == state.totalXp &&
-            state.levelProgressFraction > 0
+    final levelProgressFraction =
+        totalXp == state.totalXp && state.levelProgressFraction > 0
         ? state.levelProgressFraction
         : LevelProgress.fraction(totalXp);
 
@@ -190,8 +281,8 @@ class GamificationCubit extends Cubit<GamificationState> {
       longestStreak: previousStreakInfo == null
           ? streak
           : (previousStreakInfo.longestStreak < streak
-              ? streak
-              : previousStreakInfo.longestStreak),
+                ? streak
+                : previousStreakInfo.longestStreak),
       lastReadDate: today,
       streakStatus:
           result.streakStatus ?? previousStreakInfo?.streakStatus ?? 'active',
@@ -202,7 +293,8 @@ class GamificationCubit extends Cubit<GamificationState> {
       weeklySessionCounts: previousStreakInfo?.weeklySessionCounts,
     );
 
-    final earned = result.xpEarned ??
+    final earned =
+        result.xpEarned ??
         LevelProgress.fallbackSessionXp(isBookComplete: isBookComplete);
     final totalXp = result.totalXp ?? (state.totalXp + earned);
     final level = result.level ?? LevelProgress.levelFromXp(totalXp);
@@ -210,8 +302,7 @@ class GamificationCubit extends Cubit<GamificationState> {
         result.levelProgress ?? LevelProgress.fraction(totalXp);
     final minutes = sessionMinutes.clamp(1, 240);
     final storiesRead = state.storiesRead + (isBookComplete ? 1 : 0);
-    final readTimeHours =
-        state.readTimeHours + (minutes / 60.0);
+    final readTimeHours = state.readTimeHours + (minutes / 60.0);
 
     emit(
       state.copyWith(
@@ -229,6 +320,7 @@ class GamificationCubit extends Cubit<GamificationState> {
     );
 
     _syncCachedUserXpAndStreak();
+    await persistCachedUser();
     unawaited(loadGamification());
   }
 
@@ -352,16 +444,17 @@ class GamificationCubit extends Cubit<GamificationState> {
     emit(state.copyWith(isSharing: false));
     if (shareResult == null || !shareResult.success) return false;
 
-    final totalXp = state.totalXp + 25;
+    final totalXp = state.totalXp + LevelProgress.shareXpReward;
     emit(
       state.copyWith(
         totalXp: totalXp,
-        lastXpEarned: 25,
+        lastXpEarned: LevelProgress.shareXpReward,
         level: LevelProgress.levelFromXp(totalXp),
         levelProgressFraction: LevelProgress.fraction(totalXp),
       ),
     );
     _syncCachedUserXpAndStreak();
+    await persistCachedUser();
     await loadGamification();
     return true;
   }

@@ -43,6 +43,30 @@ class StoryDetailDto {
     );
   }
 
+  factory StoryDetailDto.fromDomain(StoryDetail detail) {
+    return StoryDetailDto(
+      storyId: detail.storyId,
+      title: detail.title,
+      genre: detail.genre,
+      description: detail.description,
+      coverImageUrl: detail.coverImageUrl,
+      readingTime: detail.readingTime,
+      totalChapters: detail.totalChapters,
+      ageRange: AgeRangeDto(min: detail.ageRange.min, max: detail.ageRange.max),
+      chapters: detail.chapters
+          .map(
+            (chapter) => ChapterSummaryDto(
+              chapterId: chapter.chapterId,
+              chapterNumber: chapter.chapterNumber,
+              title: chapter.title,
+              wordCount: chapter.wordCount,
+              imageUrl: chapter.imageUrl,
+            ),
+          )
+          .toList(),
+    );
+  }
+
   factory StoryDetailDto.fromJson(Map<String, dynamic> json) =>
       _$StoryDetailDtoFromJson(json);
 

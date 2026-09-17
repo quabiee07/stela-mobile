@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
+import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/features/auth/domain/models/user_model.dart';
 
@@ -15,11 +17,14 @@ class StreakCard extends StatelessWidget {
     this.freezeAvailable = false,
     this.isFrozen = false,
     this.onActivateFreeze,
+    this.onOpenCalendar,
   });
+
   final StreakDataModel? streakData;
   final bool freezeAvailable;
   final bool isFrozen;
   final VoidCallback? onActivateFreeze;
+  final VoidCallback? onOpenCalendar;
 
   static const _barColors = [
     Color(0xFFEB4C4C),
@@ -57,7 +62,6 @@ class StreakCard extends StatelessWidget {
   double _maxY(List<_BarData> bars) {
     final peak = bars.fold<double>(0, (max, bar) => math.max(max, bar.value));
     if (peak <= 0) return 50;
-    // Headroom so a full day doesn't clip the rounded top.
     final padded = peak * 1.25;
     if (padded <= 50) return 50;
     if (padded <= 100) return 100;
@@ -85,14 +89,15 @@ class StreakCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'This week',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: onSurface,
+              Expanded(
+                child: Text(
+                  'This week',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: onSurface,
+                  ),
                 ),
               ),
               Text(
@@ -105,6 +110,20 @@ class StreakCard extends StatelessWidget {
                   color: orange,
                 ),
               ),
+              if (onOpenCalendar != null) ...[
+                const Gap(8),
+                Clickable(
+                  onPressed: onOpenCalendar!,
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: AppIcon(
+                      AppIcons.arrowRight,
+                      size: 18,
+                      color: orange,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           if (freezeAvailable || isFrozen) ...[
@@ -151,13 +170,13 @@ class StreakCard extends StatelessWidget {
           const Gap(20),
           SizedBox(
             width: double.infinity,
-            height: 220,
+            height: 150,
             child: BarChart(
               BarChartData(
                 maxY: maxY,
                 minY: 0,
                 alignment: BarChartAlignment.spaceAround,
-                barTouchData: BarTouchData(enabled: false),
+                barTouchData: BarTouchData(enabled: true),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(

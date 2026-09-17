@@ -50,7 +50,7 @@ class SocialSignUpButton extends StatelessWidget {
                   ),
                   Text(
                     text ?? (isGoogle ? 'Google' : 'Apple'),
-                    style: theme.textTheme.displaySmall?.copyWith(fontSize: 16),
+                    style: theme.textTheme.displaySmall?.copyWith(fontSize: 16, color:Colors.black),
                   ),
                 ],
               ),

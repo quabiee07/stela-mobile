@@ -19,6 +19,7 @@ class StoryPlaybackState extends Equatable {
     this.transitionMessage,
     this.isStoryComplete = false,
     this.autoAdvancing = false,
+    this.isCelebrating = false,
   });
 
   final bool hasSession;
@@ -37,8 +38,13 @@ class StoryPlaybackState extends Equatable {
   final bool isStoryComplete;
   final bool autoAdvancing;
 
+  /// True while a blocking celebration (streak/badge/story-complete) owns the
+  /// gate — playback must not auto-advance or resume under that UI.
+  final bool isCelebrating;
+
   bool get showMiniPlayer =>
       hasSession &&
+      !isStoryComplete &&
       !isDetailExpanded &&
       (isPlaying || isLoading || duration > Duration.zero);
 
@@ -94,6 +100,7 @@ class StoryPlaybackState extends Equatable {
     bool clearTransitionMessage = false,
     bool? isStoryComplete,
     bool? autoAdvancing,
+    bool? isCelebrating,
     bool clearSession = false,
   }) {
     return StoryPlaybackState(
@@ -117,6 +124,7 @@ class StoryPlaybackState extends Equatable {
       isStoryComplete:
           clearSession ? false : (isStoryComplete ?? this.isStoryComplete),
       autoAdvancing: clearSession ? false : (autoAdvancing ?? this.autoAdvancing),
+      isCelebrating: clearSession ? false : (isCelebrating ?? this.isCelebrating),
     );
   }
 
@@ -137,5 +145,6 @@ class StoryPlaybackState extends Equatable {
         transitionMessage,
         isStoryComplete,
         autoAdvancing,
+        isCelebrating,
       ];
 }

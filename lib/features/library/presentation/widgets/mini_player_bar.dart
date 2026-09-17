@@ -19,6 +19,7 @@ class MiniPlayerBar extends StatelessWidget {
     super.key,
     this.docked = false,
     this.state,
+    this.useHero = true,
   });
 
   /// When true, renders without outer margin/shadow (parent dock owns chrome).
@@ -27,12 +28,19 @@ class MiniPlayerBar extends StatelessWidget {
   /// Optional pre-built state to avoid an extra [BlocBuilder] in the dock.
   final StoryPlaybackState? state;
 
+  /// The floating overlay bar skips Hero so it cannot collide with the dock.
+  final bool useHero;
+
   static const height = 72.0;
 
   @override
   Widget build(BuildContext context) {
     if (state != null) {
-      return _MiniPlayerBody(docked: docked, state: state!);
+      return _MiniPlayerBody(
+        docked: docked,
+        state: state!,
+        useHero: useHero,
+      );
     }
 
     return BlocBuilder<StoryPlaybackCubit, StoryPlaybackState>(
@@ -47,7 +55,11 @@ class MiniPlayerBar extends StatelessWidget {
         if (!playbackState.showMiniPlayer) {
           return const SizedBox.shrink();
         }
-        return _MiniPlayerBody(docked: docked, state: playbackState);
+        return _MiniPlayerBody(
+          docked: docked,
+          state: playbackState,
+          useHero: useHero,
+        );
       },
     );
   }
@@ -57,10 +69,12 @@ class _MiniPlayerBody extends StatelessWidget {
   const _MiniPlayerBody({
     required this.docked,
     required this.state,
+    required this.useHero,
   });
 
   final bool docked;
   final StoryPlaybackState state;
+  final bool useHero;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +105,7 @@ class _MiniPlayerBody extends StatelessWidget {
                             width: 48,
                             height: 48,
                             borderRadius: 10,
+                            useHero: useHero,
                           ),
                           const Gap(12),
                           Expanded(

@@ -8,12 +8,21 @@ abstract final class LevelProgress {
 
   static int xpIntoLevel(int totalXp) => totalXp % xpPerLevel;
 
-  static int xpToNextLevel(int totalXp) =>
-      xpPerLevel - xpIntoLevel(totalXp);
+  static int xpToNextLevel(int totalXp) => xpPerLevel - xpIntoLevel(totalXp);
 
   static double fraction(int totalXp) => xpIntoLevel(totalXp) / xpPerLevel;
+
+  /// XP awarded by `POST /xp/share`.
+  static const shareXpReward = 20;
 
   /// Fallback XP when POST /sessions/log does not yet return [xpEarned].
   static int fallbackSessionXp({required bool isBookComplete}) =>
       isBookComplete ? 40 : 15;
+
+  /// Profile/session payloads can lag behind a just-logged chapter. Never let
+  /// a stale remote total replace a higher local total.
+  static int preferXp(int? remote, int local) {
+    final value = remote ?? 0;
+    return value > local ? value : local;
+  }
 }

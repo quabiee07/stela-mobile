@@ -134,7 +134,10 @@ class _GenderSection extends StatelessWidget {
               onPressed: () => onSelect(voice.id),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: selected
                       ? orange.withValues(alpha: 0.08)
@@ -147,20 +150,12 @@ class _GenderSection extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: selected ? orange : context.chipFill,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: AppIcon(
-                          AppIcons.voice,
-                          size: 20,
-                          color: selected ? Colors.white : context.mutedText,
-                        ),
-                      ),
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Color(voice.accentColor),
+                      backgroundImage: voice.avatarAsset != null
+                          ? AssetImage(voice.avatarAsset!)
+                          : null,
                     ),
                     const Gap(12),
                     Expanded(

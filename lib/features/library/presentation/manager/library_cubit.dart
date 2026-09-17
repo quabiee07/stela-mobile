@@ -27,9 +27,11 @@ class LibraryCubit extends Cubit<LibraryState> {
 
   Stream<LibraryEffect> get effects => _effects.stream;
 
-  Future<void> loadStories() async {
+  Future<void> loadStories({bool force = false}) async {
     emit(state.copyWith(isLoading: true));
-    final value = await GetStoriesUseCase(_repo).invoke();
+    final value = await GetStoriesUseCase(_repo, force: force).invoke();
+    if (isClosed) return;
+
     final result = value.getOrElse((error) {
       _effects.add(LibraryErrorEffect(error.toString()));
       return null;
@@ -53,20 +55,44 @@ class LibraryCubit extends Cubit<LibraryState> {
         state.copyWith(searchQuery: '', selectedGenre: 'All'),
       );
 
-  Future<void> loadStoryDetail(String storyId) async {
-    emit(state.copyWith(isLoadingDetail: true, clearSelectedStory: true));
+  Future<void> loadStoryDetail(
+    String storyId, {
+    bool force = false,
+  }) async {
+    final keepExisting =
+        !force && state.selectedStory?.storyId == storyId;
+    emit(
+      state.copyWith(
+        isLoadingDetail: !keepExisting,
+        clearSelectedStory: !keepExisting,
+        clearDetailError: true,
+      ),
+    );
 
-    final useCase = GetStoryDetailUseCase(_repo)..param = storyId;
+    final useCase = GetStoryDetailUseCase(_repo, force: force)..param = storyId;
     final value = await useCase.invoke();
     final result = value.getOrElse((error) {
       _effects.add(LibraryErrorEffect(error.toString()));
       return null;
     });
 
+    if (isClosed) return;
+
+    if (result == null) {
+      emit(
+        state.copyWith(
+          isLoadingDetail: false,
+          detailError: 'Could not load this story. Please try again.',
+        ),
+      );
+      return;
+    }
+
     emit(
       state.copyWith(
         selectedStory: result,
         isLoadingDetail: false,
+        clearDetailError: true,
       ),
     );
   }

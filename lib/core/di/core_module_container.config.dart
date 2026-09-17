@@ -11,6 +11,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:cloud_firestore/cloud_firestore.dart' as _i974;
 import 'package:dio/dio.dart' as _i361;
+import 'package:firebase_storage/firebase_storage.dart' as _i457;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
@@ -44,12 +45,16 @@ import 'package:stela_mobile/features/library/data/repository/stories_repository
     as _i904;
 import 'package:stela_mobile/features/library/data/services/elevenlabs_tts_service.dart'
     as _i815;
+import 'package:stela_mobile/features/library/data/services/pending_session_store.dart'
+    as _i990;
 import 'package:stela_mobile/features/library/data/services/session_id_store.dart'
     as _i986;
 import 'package:stela_mobile/features/library/data/services/session_service.dart'
     as _i974;
 import 'package:stela_mobile/features/library/data/services/stories_api_service.dart'
     as _i902;
+import 'package:stela_mobile/features/library/data/services/story_detail_store.dart'
+    as _i456;
 import 'package:stela_mobile/features/library/data/services/tts_audio_cache.dart'
     as _i794;
 import 'package:stela_mobile/features/library/data/services/voice_preference_store.dart'
@@ -76,6 +81,8 @@ import 'package:stela_mobile/features/profile/domain/repository/profile_reposito
     as _i571;
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_cubit.dart'
     as _i254;
+import 'package:stela_mobile/features/profile/presentation/manager/profile_cubit.dart'
+    as _i661;
 import 'package:stela_mobile/features/profile/presentation/manager/reading_preferences_cubit.dart'
     as _i265;
 
@@ -94,6 +101,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i974.SessionService>(() => coreModule.sessionService);
     gh.factoryAsync<_i460.SharedPreferences>(() => coreModule.preferences());
     gh.factory<_i974.FirebaseFirestore>(() => coreModule.firestore());
+    gh.factory<_i457.FirebaseStorage>(() => coreModule.storage());
     gh.factory<_i537.AuthApiService>(() => authModule.api);
     gh.factory<_i178.HomeApiService>(() => homeModule.api);
     gh.factory<_i902.StoriesApiService>(() => libraryModule.storiesApi);
@@ -101,16 +109,24 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => coreModule.secureStorage(),
     );
+    gh.lazySingleton<_i990.PendingSessionStore>(
+      () => _i990.PendingSessionStore(),
+    );
     gh.lazySingleton<_i986.SessionIdStore>(() => _i986.SessionIdStore());
+    gh.lazySingleton<_i456.StoryDetailStore>(() => _i456.StoryDetailStore());
     gh.lazySingleton<_i794.TtsAudioCache>(() => _i794.TtsAudioCache());
     gh.lazySingleton<_i376.VoicePreferenceStore>(
       () => _i376.VoicePreferenceStore(),
     );
-    gh.lazySingleton<_i492.ProfileFirebaseService>(
-      () => _i492.ProfileFirebaseService(),
-    );
     gh.lazySingleton<_i265.ReadingPreferencesCubit>(
       () => _i265.ReadingPreferencesCubit(),
+    );
+    gh.lazySingleton<_i675.SessionRepository>(
+      () => _i551.SessionRepositoryImpl(
+        gh<_i974.SessionService>(),
+        gh<_i986.SessionIdStore>(),
+        gh<_i990.PendingSessionStore>(),
+      ),
     );
     gh.lazySingleton<_i490.SecureTokenStorage>(
       () => _i490.SecureTokenStorage(gh<_i558.FlutterSecureStorage>()),
@@ -125,11 +141,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i901.LibraryRepository>(
       () => _i785.LibraryRepositoryImpl(),
     );
-    gh.lazySingleton<_i675.SessionRepository>(
-      () => _i551.SessionRepositoryImpl(
-        gh<_i974.SessionService>(),
-        gh<_i986.SessionIdStore>(),
-      ),
+    gh.lazySingleton<_i492.ProfileFirebaseService>(
+      () => _i492.ProfileFirebaseService(gh<_i457.FirebaseStorage>()),
     );
     gh.factory<_i815.ElevenLabsTtsService>(
       () => libraryModule.elevenLabsTtsService(
@@ -139,11 +152,22 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i571.ProfileRepository>(
       () => _i219.ProfileRepositoryImpl(gh<_i481.ProfileApiService>()),
     );
+    gh.lazySingleton<_i149.StoriesRepository>(
+      () => _i904.StoriesRepositoryImpl(
+        gh<_i902.StoriesApiService>(),
+        gh<_i456.StoryDetailStore>(),
+      ),
+    );
     gh.lazySingleton<_i611.FirebaseAuthService>(
       () => _i611.FirebaseAuthService(gh<_i490.SecureTokenStorage>()),
     );
-    gh.lazySingleton<_i149.StoriesRepository>(
-      () => _i904.StoriesRepositoryImpl(gh<_i902.StoriesApiService>()),
+    gh.lazySingleton<_i315.StoryPlaybackCubit>(
+      () => _i315.StoryPlaybackCubit(
+        gh<_i901.LibraryRepository>(),
+        gh<_i149.StoriesRepository>(),
+        gh<_i675.SessionRepository>(),
+        gh<_i376.VoicePreferenceStore>(),
+      ),
     );
     gh.lazySingleton<_i361.Dio>(
       () => coreModule.dio(gh<_i490.SecureTokenStorage>()),
@@ -166,13 +190,8 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i149.StoriesRepository>(),
       ),
     );
-    gh.lazySingleton<_i315.StoryPlaybackCubit>(
-      () => _i315.StoryPlaybackCubit(
-        gh<_i901.LibraryRepository>(),
-        gh<_i149.StoriesRepository>(),
-        gh<_i675.SessionRepository>(),
-        gh<_i376.VoicePreferenceStore>(),
-      ),
+    gh.lazySingleton<_i661.ProfileCubit>(
+      () => _i661.ProfileCubit(gh<_i576.AuthRepository>()),
     );
     return this;
   }

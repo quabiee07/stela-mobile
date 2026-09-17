@@ -16,17 +16,17 @@ class OnboardingState extends Equatable {
 
   static final List<OnboardingModel> _defaultPages = [
     OnboardingModel(
-      image: mascot1,
+      image: onboard1,
       title: 'Where\nStories Come Alive',
       description: '',
     ),
     OnboardingModel(
-      image: mascot2,
+      image: onboard2,
       title: 'Stories\nfor Every Dream',
       description: '',
     ),
     OnboardingModel(
-      image: mascot3,
+      image: onboard3,
       title: 'Illustrations\nMade By Magic',
       description: '',
     ),

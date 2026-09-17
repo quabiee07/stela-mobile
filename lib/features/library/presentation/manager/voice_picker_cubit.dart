@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -82,8 +84,8 @@ class VoicePickerCubit extends Cubit<VoicePickerState> {
             preferenceStore ?? getIt.get<VoicePreferenceStore>(),
         _previewPlayer = previewPlayer ?? AudioPlayer(),
         super(const VoicePickerState()) {
-    _previewPlayer.onPositionChanged.listen(_onPreviewPosition);
-    _previewPlayer.onDurationChanged.listen((duration) {
+    _positionSub = _previewPlayer.onPositionChanged.listen(_onPreviewPosition);
+    _durationSub = _previewPlayer.onDurationChanged.listen((duration) {
       _previewDuration = duration;
     });
     _bootstrap();
@@ -92,6 +94,8 @@ class VoicePickerCubit extends Cubit<VoicePickerState> {
   final LibraryRepository _repository;
   final VoicePreferenceStore _preferenceStore;
   final AudioPlayer _previewPlayer;
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration>? _durationSub;
   Duration _previewDuration = Duration.zero;
   double _lastEmittedProgress = -1;
 
@@ -230,6 +234,8 @@ class VoicePickerCubit extends Cubit<VoicePickerState> {
 
   @override
   Future<void> close() async {
+    await _positionSub?.cancel();
+    await _durationSub?.cancel();
     await _previewPlayer.stop();
     await _previewPlayer.dispose();
     return super.close();

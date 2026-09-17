@@ -40,4 +40,6 @@ abstract final class AppIcons {
   static const AppIconData logout = HugeIcons.strokeRoundedLogout01;
   static const AppIconData lock = HugeIcons.strokeRoundedLock;
   static const AppIconData sparkles = HugeIcons.strokeRoundedSparkles;
+  static const AppIconData camera = HugeIcons.strokeRoundedCamera01;
+  static const AppIconData gallery = HugeIcons.strokeRoundedImage01;
 }

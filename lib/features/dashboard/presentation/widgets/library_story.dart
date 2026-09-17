@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
 import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
-import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
 import 'package:stela_mobile/core/presentation/widgets/cached_image.dart';
 import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/features/library/domain/models/story_summary.dart';
@@ -82,7 +80,7 @@ class LibraryStory extends StatelessWidget {
             const Gap(4),
             Row(
               children: List.generate(5, (index) {
-                return const AppIcon(AppIcons.star, color: amber, size: 14);
+                return const Icon(Icons.star_rounded, color: amber, size: 14);
               }),
             ),
           ],

@@ -15,91 +15,6 @@ import 'package:stela_mobile/features/auth/domain/usecases/reset_password_usecas
 import 'package:stela_mobile/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/reading_preferences_cubit.dart';
 
-class AuthFormState extends Equatable {
-  const AuthFormState({
-    this.email = '',
-    this.password = '',
-    this.confirmPassword = '',
-    this.name = '',
-    this.age = '',
-    this.emailError,
-    this.passwordError,
-    this.confirmPasswordError,
-    this.isValidated = false,
-    this.loading = false,
-    this.googleLoading = false,
-  });
-
-  final String email;
-  final String password;
-  final String confirmPassword;
-  final String name;
-  final String age;
-  final String? emailError;
-  final String? passwordError;
-  final String? confirmPasswordError;
-  final bool isValidated;
-  final bool loading;
-  final bool googleLoading;
-
-  LoginPayload get loginPayload =>
-      LoginPayload(email: email, password: password);
-
-  UserPayload get payload => UserPayload(
-        email: email,
-        password: password,
-      );
-
-  AuthFormState copyWith({
-    String? email,
-    String? password,
-    String? confirmPassword,
-    String? name,
-    String? age,
-    String? emailError,
-    String? passwordError,
-    String? confirmPasswordError,
-    bool clearEmailError = false,
-    bool clearPasswordError = false,
-    bool clearConfirmPasswordError = false,
-    bool? isValidated,
-    bool? loading,
-    bool? googleLoading,
-  }) {
-    return AuthFormState(
-      email: email ?? this.email,
-      password: password ?? this.password,
-      confirmPassword: confirmPassword ?? this.confirmPassword,
-      name: name ?? this.name,
-      age: age ?? this.age,
-      emailError: clearEmailError ? null : (emailError ?? this.emailError),
-      passwordError:
-          clearPasswordError ? null : (passwordError ?? this.passwordError),
-      confirmPasswordError: clearConfirmPasswordError
-          ? null
-          : (confirmPasswordError ?? this.confirmPasswordError),
-      isValidated: isValidated ?? this.isValidated,
-      loading: loading ?? this.loading,
-      googleLoading: googleLoading ?? this.googleLoading,
-    );
-  }
-
-  @override
-  List<Object?> get props => [
-        email,
-        password,
-        confirmPassword,
-        name,
-        age,
-        emailError,
-        passwordError,
-        confirmPasswordError,
-        isValidated,
-        loading,
-        googleLoading,
-      ];
-}
-
 sealed class AuthEffect {
   const AuthEffect();
 }
@@ -121,15 +36,121 @@ final class AuthPasswordResetEffect extends AuthEffect {
   const AuthPasswordResetEffect();
 }
 
+enum AuthFormMode { login, register, forgot }
+
+class AuthFormState extends Equatable {
+  const AuthFormState({
+    this.mode = AuthFormMode.login,
+    this.email = '',
+    this.password = '',
+    this.confirmPassword = '',
+    this.name = '',
+    this.age = '',
+    this.emailError,
+    this.passwordError,
+    this.confirmPasswordError,
+    this.isValidated = false,
+    this.loading = false,
+    this.googleLoading = false,
+  });
+
+  final AuthFormMode mode;
+  final String email;
+  final String password;
+  final String confirmPassword;
+  final String name;
+  final String age;
+  final String? emailError;
+  final String? passwordError;
+  final String? confirmPasswordError;
+  final bool isValidated;
+  final bool loading;
+  final bool googleLoading;
+
+  LoginPayload get loginPayload =>
+      LoginPayload(email: email, password: password);
+
+  UserPayload get payload => UserPayload(
+        email: email,
+        password: password,
+      );
+
+  AuthFormState copyWith({
+    AuthFormMode? mode,
+    String? email,
+    String? password,
+    String? confirmPassword,
+    String? name,
+    String? age,
+    String? emailError,
+    String? passwordError,
+    String? confirmPasswordError,
+    bool clearEmailError = false,
+    bool clearPasswordError = false,
+    bool clearConfirmPasswordError = false,
+    bool? isValidated,
+    bool? loading,
+    bool? googleLoading,
+  }) {
+    return AuthFormState(
+      mode: mode ?? this.mode,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      confirmPassword: confirmPassword ?? this.confirmPassword,
+      name: name ?? this.name,
+      age: age ?? this.age,
+      emailError: clearEmailError ? null : (emailError ?? this.emailError),
+      passwordError:
+          clearPasswordError ? null : (passwordError ?? this.passwordError),
+      confirmPasswordError: clearConfirmPasswordError
+          ? null
+          : (confirmPasswordError ?? this.confirmPasswordError),
+      isValidated: isValidated ?? this.isValidated,
+      loading: loading ?? this.loading,
+      googleLoading: googleLoading ?? this.googleLoading,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        mode,
+        email,
+        password,
+        confirmPassword,
+        name,
+        age,
+        emailError,
+        passwordError,
+        confirmPasswordError,
+        isValidated,
+        loading,
+        googleLoading,
+      ];
+}
+
 class AuthCubit extends Cubit<AuthFormState> {
-  AuthCubit({AuthRepository? repository})
+  AuthCubit({AuthRepository? repository, AuthFormMode mode = AuthFormMode.login})
       : _repo = repository ?? getIt.get<AuthRepository>(),
-        super(const AuthFormState());
+        super(AuthFormState(mode: mode));
 
   final AuthRepository _repo;
   final _effects = StreamController<AuthEffect>.broadcast();
 
   Stream<AuthEffect> get effects => _effects.stream;
+
+  void setMode(AuthFormMode mode) {
+    emit(
+      state.copyWith(
+        mode: mode,
+        isValidated: _computeValidated(
+          mode: mode,
+          email: state.email,
+          password: state.password,
+          confirmPassword: state.confirmPassword,
+        ),
+      ),
+    );
+  }
 
   void setEmail(String email) {
     final emailError = email.validateEmail();
@@ -139,6 +160,7 @@ class AuthCubit extends Cubit<AuthFormState> {
         emailError: emailError,
         clearEmailError: emailError == null,
         isValidated: _computeValidated(
+          mode: state.mode,
           email: email,
           password: state.password,
           confirmPassword: state.confirmPassword,
@@ -154,9 +176,13 @@ class AuthCubit extends Cubit<AuthFormState> {
         password: password,
         passwordError: passwordError,
         clearPasswordError: passwordError == null,
-        confirmPasswordError:
-            state.confirmPassword.validateRePassword(password),
+        confirmPasswordError: state.mode == AuthFormMode.register
+            ? state.confirmPassword.validateRePassword(password)
+            : null,
+        clearConfirmPasswordError: state.mode != AuthFormMode.register ||
+            state.confirmPassword.validateRePassword(password) == null,
         isValidated: _computeValidated(
+          mode: state.mode,
           email: state.email,
           password: password,
           confirmPassword: state.confirmPassword,
@@ -173,6 +199,7 @@ class AuthCubit extends Cubit<AuthFormState> {
         confirmPasswordError: confirmError,
         clearConfirmPasswordError: confirmError == null,
         isValidated: _computeValidated(
+          mode: state.mode,
           email: state.email,
           password: state.password,
           confirmPassword: password,
@@ -186,19 +213,38 @@ class AuthCubit extends Cubit<AuthFormState> {
   void setName(String name) => emit(state.copyWith(name: name));
 
   bool _computeValidated({
+    required AuthFormMode mode,
     required String email,
     required String password,
     required String confirmPassword,
   }) {
-    return [
-      email.validateField() == null,
-      password.validateField() == null,
-      confirmPassword.validateRePassword(password) == null,
-    ].validate();
+    switch (mode) {
+      case AuthFormMode.forgot:
+        return email.validateEmail() == null;
+      case AuthFormMode.login:
+        return [
+          email.validateEmail() == null,
+          password.validatePassword() == null,
+        ].validate();
+      case AuthFormMode.register:
+        return [
+          email.validateEmail() == null,
+          password.validatePassword() == null,
+          confirmPassword.validateRePassword(password) == null,
+        ].validate();
+    }
   }
 
   Future<void> createAccount() async {
     if (state.loading) return;
+    if (!_computeValidated(
+      mode: AuthFormMode.register,
+      email: state.email,
+      password: state.password,
+      confirmPassword: state.confirmPassword,
+    )) {
+      return;
+    }
     emit(state.copyWith(loading: true));
 
     final result = await CreateAccountUseCase(_repo, state.payload).invoke();
@@ -207,13 +253,15 @@ class AuthCubit extends Cubit<AuthFormState> {
       return null;
     });
 
+    if (isClosed) return;
+
     if (value != null) {
       // Brand-new email accounts always need setup, regardless of any
       // leftover device onboarding flag from a previous session.
       await getIt.get<ReadingPreferencesCubit>().reload();
       _effects.add(AuthSuccessEffect(value, requiresSetup: true));
     }
-    emit(state.copyWith(loading: false));
+    if (!isClosed) emit(state.copyWith(loading: false));
   }
 
   Future<void> signInWithGoogle() async {
@@ -226,17 +274,27 @@ class AuthCubit extends Cubit<AuthFormState> {
       return null;
     });
 
+    if (isClosed) return;
+
     if (value != null) {
       await getIt.get<ReadingPreferencesCubit>().reload();
       _effects.add(
         AuthSuccessEffect(value, requiresSetup: await _requiresSetup()),
       );
     }
-    emit(state.copyWith(googleLoading: false));
+    if (!isClosed) emit(state.copyWith(googleLoading: false));
   }
 
   Future<void> signIn() async {
     if (state.loading) return;
+    if (!_computeValidated(
+      mode: AuthFormMode.login,
+      email: state.email,
+      password: state.password,
+      confirmPassword: state.confirmPassword,
+    )) {
+      return;
+    }
     emit(state.copyWith(loading: true));
 
     final result = await SignInUseCase(_repo, state.loginPayload).invoke();
@@ -245,13 +303,15 @@ class AuthCubit extends Cubit<AuthFormState> {
       return null;
     });
 
+    if (isClosed) return;
+
     if (value != null) {
       await getIt.get<ReadingPreferencesCubit>().reload();
       _effects.add(
         AuthSuccessEffect(value, requiresSetup: await _requiresSetup()),
       );
     }
-    emit(state.copyWith(loading: false));
+    if (!isClosed) emit(state.copyWith(loading: false));
   }
 
   /// After login/Google sync, true when this Firebase user has no profile yet.
@@ -262,6 +322,7 @@ class AuthCubit extends Cubit<AuthFormState> {
 
   Future<void> resetPassword() async {
     if (state.loading) return;
+    if (state.email.validateEmail() != null) return;
     emit(state.copyWith(loading: true));
 
     final result = await ResetPasswordUseCase(_repo, state.email).invoke();
@@ -270,10 +331,12 @@ class AuthCubit extends Cubit<AuthFormState> {
       return null;
     });
 
+    if (isClosed) return;
+
     if (value != null) {
       _effects.add(const AuthPasswordResetEffect());
     }
-    emit(state.copyWith(loading: false));
+    if (!isClosed) emit(state.copyWith(loading: false));
   }
 
   @override

@@ -12,6 +12,7 @@ class ChapterContentDto {
   final String title;
   final int wordCount;
   final String? imageUrl;
+  @JsonKey(defaultValue: <ChapterParagraphDto>[])
   final List<ChapterParagraphDto> paragraphs;
 
   const ChapterContentDto({
@@ -20,7 +21,7 @@ class ChapterContentDto {
     required this.chapterNumber,
     required this.title,
     required this.wordCount,
-    required this.paragraphs,
+    this.paragraphs = const [],
     this.imageUrl,
   });
 

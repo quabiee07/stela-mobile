@@ -1,6 +1,6 @@
 //VECTORS
 const appLogo = 'assets/vectors/stela_logo.svg';
-const arrowRight= 'assets/vectors/arrow.svg';
+const arrowRight = 'assets/vectors/arrow.svg';
 const arrowLeft = 'assets/vectors/arrow-right.svg';
 const arrowDown = 'assets/vectors/arrow_down.svg';
 const locationIcon = 'assets/vectors/location.svg';
@@ -45,7 +45,6 @@ const notification = 'assets/vectors/notification-bing.svg';
 const leftPolygon = 'assets/vectors/left.svg';
 const rightPolygon = 'assets/vectors/right.svg';
 const middlePolygon = 'assets/vectors/middle.svg';
-
 
 //Bottom Nav Icons
 const home = 'assets/vectors/home.svg';
@@ -101,8 +100,23 @@ const avatar2 = 'assets/images/avatar2.png';
 const avatar3 = 'assets/images/avatar3.png';
 const avatar4 = 'assets/images/avatar4.png';
 const avatar5 = 'assets/images/avatar5.png';
+const book = 'assets/images/Book.png';
+const clockk = 'assets/images/Clock.png';
+const warranty = 'assets/images/Warranty.png';
 
-
+//Badges
+const badgeDragonTamer = 'assets/images/dragon-tamer.png';
+const badgeNightOwl = 'assets/images/night-owl.png';
+const badgeBookWorm = 'assets/images/book-worm.png';
+const badgeAudioFan = 'assets/images/audio-fan.png';
+const badgeExplorer = 'assets/images/explorer.png';
+const badgeSciFiReader = 'assets/images/sci-fi-reader.png';
+const badgeStreakKing = 'assets/images/streak-king.png';
+const badgeFirstLight = 'assets/images/first-light.png';
+const badgeFastReader = 'assets/images/fast-reader.png';
+const badgeOneSitting = 'assets/images/one-sitting.png';
+const badgePassport = 'assets/images/passport.png';
+const badgeNightReader = 'assets/images/night-reader.png';
 
 //onboardong
 const onboard1 = 'assets/images/Hourglass.png';
@@ -112,4 +126,3 @@ const onboard3 = 'assets/images/Shell.png';
 //Gifs
 const ageGif = 'assets/gifs/age.gif';
 const favStoryGif = 'assets/gifs/story.gif';
-

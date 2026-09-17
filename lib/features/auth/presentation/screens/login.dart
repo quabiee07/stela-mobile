@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
 import 'package:stela_mobile/core/presentation/utils/snack_bar_utils.dart';
@@ -14,6 +15,7 @@ import 'package:stela_mobile/features/auth/presentation/manager/auth_cubit.dart'
 import 'package:stela_mobile/features/auth/presentation/screens/forgot_password.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/register.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/setup_account.dart';
+import 'package:stela_mobile/features/dashboard/presentation/manager/home_cubit.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -37,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (effect.requiresSetup) {
         context.pushNamedAndClear(SetupAccountScreen.id);
       } else {
+        getIt.get<HomeCubit>().resetToHomeTab();
         context.pushNamedAndClear(DashboardScreen.id);
       }
       showSuccess("Login successful");
@@ -53,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return CubitScaffold<AuthCubit, AuthFormState>(
       create: (_) {
-        final cubit = AuthCubit();
+        final cubit = AuthCubit(mode: AuthFormMode.login);
         _effectSub?.cancel();
         _effectSub = cubit.effects.listen(_onEffect);
         return cubit;
@@ -131,6 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Button2(
                 title: state.loading ? 'Logging in...' : 'Log In',
                 isLoading: state.loading,
+                isEnabled: state.isValidated,
                 onPressed: cubit.signIn,
               ),
               const Gap(16),
@@ -151,6 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 text: 'Sign in with Google',
                 color: grey200,
                 onTap: cubit.signInWithGoogle,
+               
               ),
               const Gap(24),
               Row(

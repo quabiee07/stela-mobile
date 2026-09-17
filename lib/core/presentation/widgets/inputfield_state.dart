@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../utils/custom_state.dart';
 
 abstract class TextFieldParent extends StatefulWidget {
-  const TextFieldParent({required this.onChange, this.value, super.key, this.isPassword = false});
+  const TextFieldParent({
+    required this.onChange,
+    this.value,
+    super.key,
+    this.isPassword = false,
+  });
   final String? value;
 
   final bool isPassword;
@@ -31,34 +36,45 @@ abstract class TextFieldState<T extends TextFieldParent> extends CustomState<T> 
 
   @override
   void onStarted() {
-    controller.addListener(() {
-      value = controller.text;
-      if(mounted){
-        setState(() {
-
-        });
-      }
-
-      widget.onChange(controller.text);
-    });
+    controller.addListener(_onControllerChanged);
     super.onStarted();
   }
 
+  void _onControllerChanged() {
+    value = controller.text;
+    widget.onChange(controller.text);
+  }
+
   void _onFocusChange() {
+    if (!mounted) return;
     setState(() {
       isFocus = focus.hasFocus;
     });
   }
+
+  @override
+  void didUpdateWidget(covariant T oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = widget.value;
+    if (next != null && next != controller.text) {
+      controller.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+    }
+  }
+
+  @override
+  void onDestroy() {
+    focus.removeListener(_onFocusChange);
+    controller.removeListener(_onControllerChanged);
+    controller.dispose();
+    focus.dispose();
+    super.onDestroy();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.value != controller.text && widget.value != null) {
-      if (mounted) {
-        controller.text = widget.value ?? '';
-      }
-    }
     return const Placeholder();
   }
 }
-
-
-

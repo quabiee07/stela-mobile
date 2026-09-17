@@ -13,9 +13,13 @@ ChapterContentDto _$ChapterContentDtoFromJson(Map<String, dynamic> json) =>
       chapterNumber: (json['chapterNumber'] as num).toInt(),
       title: json['title'] as String,
       wordCount: (json['wordCount'] as num).toInt(),
-      paragraphs: (json['paragraphs'] as List<dynamic>)
-          .map((e) => ChapterParagraphDto.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      paragraphs:
+          (json['paragraphs'] as List<dynamic>?)
+              ?.map(
+                (e) => ChapterParagraphDto.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
       imageUrl: json['imageUrl'] as String?,
     );
 

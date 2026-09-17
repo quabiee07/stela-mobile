@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/domain/utils/constants.dart';
 import 'package:stela_mobile/core/presentation/resources/drawables.dart';
@@ -18,8 +20,10 @@ class EditProfileState extends Equatable {
     this.password = '',
     this.email = '',
     this.phoneNumber = '',
-    this.avatarAsset = femaleAvatar,
+    this.avatarUrl = femaleAvatar,
+    this.localImagePath,
     this.isSaving = false,
+    this.isPickingImage = false,
     this.isDirty = false,
     this.isHydrated = false,
   });
@@ -30,8 +34,15 @@ class EditProfileState extends Equatable {
   final String password;
   final String email;
   final String phoneNumber;
-  final String avatarAsset;
+
+  /// Saved avatar value: asset path or remote download URL.
+  final String avatarUrl;
+
+  /// Pending local file from gallery/camera (uploaded on save).
+  final String? localImagePath;
+
   final bool isSaving;
+  final bool isPickingImage;
   final bool isDirty;
   final bool isHydrated;
 
@@ -44,6 +55,7 @@ class EditProfileState extends Equatable {
   bool get canSave =>
       isDirty &&
       !isSaving &&
+      !isPickingImage &&
       firstName.trim().isNotEmpty &&
       email.trim().isNotEmpty;
 
@@ -54,8 +66,11 @@ class EditProfileState extends Equatable {
     String? password,
     String? email,
     String? phoneNumber,
-    String? avatarAsset,
+    String? avatarUrl,
+    String? localImagePath,
+    bool clearLocalImage = false,
     bool? isSaving,
+    bool? isPickingImage,
     bool? isDirty,
     bool? isHydrated,
   }) {
@@ -66,8 +81,11 @@ class EditProfileState extends Equatable {
       password: password ?? this.password,
       email: email ?? this.email,
       phoneNumber: phoneNumber ?? this.phoneNumber,
-      avatarAsset: avatarAsset ?? this.avatarAsset,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      localImagePath:
+          clearLocalImage ? null : (localImagePath ?? this.localImagePath),
       isSaving: isSaving ?? this.isSaving,
+      isPickingImage: isPickingImage ?? this.isPickingImage,
       isDirty: isDirty ?? this.isDirty,
       isHydrated: isHydrated ?? this.isHydrated,
     );
@@ -81,8 +99,10 @@ class EditProfileState extends Equatable {
         password,
         email,
         phoneNumber,
-        avatarAsset,
+        avatarUrl,
+        localImagePath,
         isSaving,
+        isPickingImage,
         isDirty,
         isHydrated,
       ];
@@ -107,6 +127,7 @@ class EditProfileCubit extends Cubit<EditProfileState> {
   }
 
   final ProfileFirebaseService _firebase;
+  final _picker = ImagePicker();
   final _effects = StreamController<EditProfileEffect>.broadcast();
 
   Stream<EditProfileEffect> get effects => _effects.stream;
@@ -134,7 +155,7 @@ class EditProfileCubit extends Cubit<EditProfileState> {
 
     var username = '';
     var phoneNumber = '';
-    var avatarAsset = _resolveAvatar(user.avatarUrl);
+    var avatarUrl = _resolveAvatar(user.avatarUrl);
 
     try {
       final remote = await _firebase.getProfile(user.id);
@@ -142,7 +163,7 @@ class EditProfileCubit extends Cubit<EditProfileState> {
       phoneNumber = (remote['phoneNumber'] as String?)?.trim() ?? '';
       final remoteAvatar = remote['avatarUrl'] as String?;
       if (remoteAvatar != null && remoteAvatar.isNotEmpty) {
-        avatarAsset = _resolveAvatar(remoteAvatar);
+        avatarUrl = _resolveAvatar(remoteAvatar);
       }
     } catch (_) {
       // Offline / missing doc — fall back to cached user only.
@@ -158,7 +179,7 @@ class EditProfileCubit extends Cubit<EditProfileState> {
             : _defaultUsername(firstName, user.email),
         email: user.email,
         phoneNumber: phoneNumber,
-        avatarAsset: avatarAsset,
+        avatarUrl: avatarUrl,
         isHydrated: true,
       ),
     );
@@ -173,6 +194,12 @@ class EditProfileCubit extends Cubit<EditProfileState> {
   String _resolveAvatar(String avatarUrl) {
     if (avatarUrl.isEmpty) return femaleAvatar;
     if (avatarChoices.contains(avatarUrl)) return avatarUrl;
+    if (avatarUrl.startsWith('http://') ||
+        avatarUrl.startsWith('https://') ||
+        avatarUrl.startsWith('assets/') ||
+        avatarUrl.startsWith('/')) {
+      return avatarUrl;
+    }
     return femaleAvatar;
   }
 
@@ -207,14 +234,52 @@ class EditProfileCubit extends Cubit<EditProfileState> {
   }
 
   void setAvatarAsset(String asset) {
-    if (asset == state.avatarAsset) return;
-    emit(state.copyWith(avatarAsset: asset, isDirty: true));
+    if (asset == state.avatarUrl && state.localImagePath == null) return;
+    emit(
+      state.copyWith(
+        avatarUrl: asset,
+        clearLocalImage: true,
+        isDirty: true,
+      ),
+    );
   }
 
-  void cycleAvatar() {
-    final index = avatarChoices.indexOf(state.avatarAsset);
-    final next = avatarChoices[(index < 0 ? 0 : index + 1) % avatarChoices.length];
-    setAvatarAsset(next);
+  Future<void> pickFromGallery() => _pickImage(ImageSource.gallery);
+
+  Future<void> pickFromCamera() => _pickImage(ImageSource.camera);
+
+  Future<void> _pickImage(ImageSource source) async {
+    if (state.isPickingImage || state.isSaving) return;
+    emit(state.copyWith(isPickingImage: true));
+
+    try {
+      final file = await _picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (file == null) {
+        emit(state.copyWith(isPickingImage: false));
+        return;
+      }
+      emit(
+        state.copyWith(
+          localImagePath: file.path,
+          isPickingImage: false,
+          isDirty: true,
+        ),
+      );
+    } catch (e) {
+      emit(state.copyWith(isPickingImage: false));
+      _effects.add(
+        EditProfileErrorEffect(
+          source == ImageSource.camera
+              ? 'Could not open the camera. Check permissions and try again.'
+              : 'Could not open your photo library. Check permissions and try again.',
+        ),
+      );
+    }
   }
 
   Future<void> save() async {
@@ -240,10 +305,19 @@ class EditProfileCubit extends Cubit<EditProfileState> {
         await authUser.updatePassword(state.password.trim());
       }
 
+      var avatarUrl = state.avatarUrl;
+      final localPath = state.localImagePath;
+      if (localPath != null && localPath.isNotEmpty) {
+        avatarUrl = await _firebase.uploadAvatar(
+          userId: user.id,
+          file: File(localPath),
+        );
+      }
+
       await _firebase.updateProfile(user.id, {
         'name': fullName,
         'email': email,
-        'avatarUrl': state.avatarAsset,
+        'avatarUrl': avatarUrl,
         'username': state.username.trim(),
         'phoneNumber': state.phoneNumber.trim(),
       });
@@ -253,7 +327,7 @@ class EditProfileCubit extends Cubit<EditProfileState> {
         name: fullName,
         email: email,
         provider: user.provider,
-        avatarUrl: state.avatarAsset,
+        avatarUrl: avatarUrl,
         age: user.age,
         favoriteGenres: user.favoriteGenres,
         level: user.level,
@@ -266,7 +340,15 @@ class EditProfileCubit extends Cubit<EditProfileState> {
       );
       await persistCachedUser();
 
-      emit(state.copyWith(isSaving: false, isDirty: false, password: ''));
+      emit(
+        state.copyWith(
+          isSaving: false,
+          isDirty: false,
+          password: '',
+          avatarUrl: avatarUrl,
+          clearLocalImage: true,
+        ),
+      );
       _effects.add(const EditProfileSavedEffect());
     } on FirebaseAuthException catch (e) {
       emit(state.copyWith(isSaving: false));

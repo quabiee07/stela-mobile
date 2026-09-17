@@ -12,6 +12,7 @@ class PlaybackCoverHero extends StatelessWidget {
     this.height,
     this.borderRadius = 10,
     this.fit = BoxFit.cover,
+    this.useHero = true,
     super.key,
   });
 
@@ -21,6 +22,7 @@ class PlaybackCoverHero extends StatelessWidget {
   final double? height;
   final double borderRadius;
   final BoxFit fit;
+  final bool useHero;
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +37,19 @@ class PlaybackCoverHero extends StatelessWidget {
         ? SizedBox(width: width, height: height, child: image)
         : SizedBox.expand(child: image);
 
+    final cover = Material(
+      type: MaterialType.transparency,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: sized,
+      ),
+    );
+
+    if (!useHero) return cover;
+
     return Hero(
       tag: PlaybackHeroTags.cover(storyId),
-      child: Material(
-        type: MaterialType.transparency,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: sized,
-        ),
-      ),
+      child: cover,
     );
   }
 }

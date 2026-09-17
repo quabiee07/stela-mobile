@@ -8,6 +8,7 @@ import 'package:stela_mobile/core/presentation/widgets/app_playback_overlay.dart
 import 'package:stela_mobile/features/library/presentation/manager/story_playback_cubit.dart';
 import 'package:stela_mobile/features/dashboard/presentation/manager/home_cubit.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_cubit.dart';
+import 'package:stela_mobile/features/profile/presentation/manager/profile_cubit.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/reading_preferences_cubit.dart';
 import 'package:stela_mobile/core/presentation/utils/custom_state.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/forgot_password.dart';
@@ -31,6 +32,7 @@ class StelaApp extends StatelessWidget {
         BlocProvider.value(value: getIt.get<StoryPlaybackCubit>()),
         BlocProvider.value(value: getIt.get<HomeCubit>()),
         BlocProvider.value(value: getIt.get<GamificationCubit>()),
+        BlocProvider.value(value: getIt.get<ProfileCubit>()),
         BlocProvider.value(value: getIt.get<ReadingPreferencesCubit>()),
       ],
       child: ChangeNotifierProvider(
@@ -59,7 +61,7 @@ class StelaApp extends StatelessWidget {
               darkTheme: provider.darkThemeData,
               themeMode: provider.themeMode,
               navigatorKey: navigator,
-              navigatorObservers: [routeObserver],
+              navigatorObservers: [routeObserver, playbackOverlayObserver],
               builder: (context, child) {
                 return AppPlaybackOverlay(child: child);
               },

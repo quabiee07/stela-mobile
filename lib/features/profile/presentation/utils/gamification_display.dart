@@ -10,19 +10,32 @@ class GamificationDisplay {
     'streak_king': '👑',
     'explorer': '🧭',
     'speed_reader': '⚡',
+    'fast_reader': '⚡',
     'ocean_explorer': '🌊',
+    'passport': '🌊',
     'scifi_pioneer': '🚀',
+    'sci_fi_reader': '🚀',
     'midnight_reader': '🌙',
+    'night_reader': '🌙',
+    'first_light': '☀️',
+    'one_sitting': '📖',
     'social_butterfly': '🦋',
   };
 
-  static const _weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const weekdayLabels = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
 
   /// Visual height for a single session on the streak chart.
   static const dayActiveValue = 40;
 
-  static String badgeIcon(String badgeId) =>
-      badgeIcons[badgeId] ?? '🏅';
+  static String badgeIcon(String badgeId) => badgeIcons[badgeId] ?? '🏅';
 
   static String badgeName(String badgeId) {
     return badgeId
@@ -57,7 +70,8 @@ class GamificationDisplay {
           ? localFallback?.lastFreezeUsedDate
           : DateTime.tryParse(freezeActivatedDate),
       // Prefer GET /streak weeklySessionCounts — do not require local storage.
-      weeklyProgress: weeklyProgressFromApi(weeklySessionCounts) ??
+      weeklyProgress:
+          weeklyProgressFromApi(weeklySessionCounts) ??
           buildThisWeekProgress(
             currentStreak: streak,
             lastReadDate: lastReadDate,
@@ -74,11 +88,12 @@ class GamificationDisplay {
       return null;
     }
 
-    return List.generate(_weekdayLabels.length, (i) {
-      final sessions =
-          i < weeklySessionCounts.length ? weeklySessionCounts[i] : 0;
+    return List.generate(weekdayLabels.length, (i) {
+      final sessions = i < weeklySessionCounts.length
+          ? weeklySessionCounts[i]
+          : 0;
       return WeeklyProgressModel(
-        weekLabel: _weekdayLabels[i],
+        weekLabel: weekdayLabels[i],
         value: sessions > 0
             ? (sessions * dayActiveValue).clamp(dayActiveValue, 200)
             : 0,
@@ -95,7 +110,9 @@ class GamificationDisplay {
     Map<String, int>? sessionCountsByDay,
   }) {
     final today = _dateOnly(now ?? DateTime.now());
-    final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+    final monday = today.subtract(
+      Duration(days: today.weekday - DateTime.monday),
+    );
 
     DateTime? lastRead = lastReadDate == null
         ? null
@@ -113,31 +130,107 @@ class GamificationDisplay {
       streakStart = lastRead.subtract(Duration(days: currentStreak - 1));
     }
 
-    return List.generate(_weekdayLabels.length, (index) {
+    return List.generate(weekdayLabels.length, (index) {
       final day = monday.add(Duration(days: index));
       final key = _dayKey(day);
       final sessions = sessionCountsByDay?[key] ?? 0;
-      final inStreak = streakStart != null &&
+      final inStreak =
+          streakStart != null &&
           !day.isBefore(streakStart) &&
           !day.isAfter(lastRead!) &&
           !day.isAfter(today);
 
       final value = inStreak
           ? (sessions > 0
-              ? (sessions * dayActiveValue).clamp(dayActiveValue, 200).toInt()
-              : dayActiveValue)
+                ? (sessions * dayActiveValue).clamp(dayActiveValue, 200).toInt()
+                : dayActiveValue)
           : (sessions > 0
-              ? (sessions * dayActiveValue).clamp(dayActiveValue, 200).toInt()
-              : 0);
+                ? (sessions * dayActiveValue).clamp(dayActiveValue, 200).toInt()
+                : 0);
 
-      return WeeklyProgressModel(
-        weekLabel: _weekdayLabels[index],
-        value: value,
-      );
+      return WeeklyProgressModel(weekLabel: weekdayLabels[index], value: value);
     });
   }
 
-  static String dayKey([DateTime? date]) => _dayKey(_dateOnly(date ?? DateTime.now()));
+  /// Dates that should appear filled on the streak calendar and week row.
+  static Set<DateTime> activeStreakDays({
+    required int currentStreak,
+    String? lastReadDate,
+    Map<String, int>? sessionCountsByDay,
+    List<int>? weeklySessionCounts,
+    DateTime? now,
+  }) {
+    final today = _dateOnly(now ?? DateTime.now());
+    final days = <DateTime>{};
+
+    DateTime? lastRead = lastReadDate == null
+        ? null
+        : DateTime.tryParse(lastReadDate);
+    if (lastRead != null) {
+      lastRead = _dateOnly(lastRead);
+    } else if (currentStreak > 0) {
+      lastRead = today;
+    }
+
+    if (lastRead != null && currentStreak > 0) {
+      for (var i = 0; i < currentStreak; i++) {
+        final day = lastRead.subtract(Duration(days: i));
+        if (!day.isAfter(today)) days.add(day);
+      }
+    }
+
+    sessionCountsByDay?.forEach((key, count) {
+      if (count <= 0) return;
+      final parsed = DateTime.tryParse(key);
+      if (parsed == null) return;
+      final day = _dateOnly(parsed);
+      if (!day.isAfter(today)) days.add(day);
+    });
+
+    if (weeklySessionCounts != null && weeklySessionCounts.isNotEmpty) {
+      final monday = today.subtract(
+        Duration(days: today.weekday - DateTime.monday),
+      );
+      for (var i = 0; i < weekdayLabels.length; i++) {
+        final sessions = i < weeklySessionCounts.length
+            ? weeklySessionCounts[i]
+            : 0;
+        if (sessions <= 0) continue;
+        final day = monday.add(Duration(days: i));
+        if (!day.isAfter(today)) days.add(day);
+      }
+    }
+
+    return days;
+  }
+
+  static List<bool> thisWeekCompleted({
+    required int currentStreak,
+    String? lastReadDate,
+    Map<String, int>? sessionCountsByDay,
+    List<int>? weeklySessionCounts,
+    DateTime? now,
+  }) {
+    final today = _dateOnly(now ?? DateTime.now());
+    final monday = today.subtract(
+      Duration(days: today.weekday - DateTime.monday),
+    );
+    final active = activeStreakDays(
+      currentStreak: currentStreak,
+      lastReadDate: lastReadDate,
+      sessionCountsByDay: sessionCountsByDay,
+      weeklySessionCounts: weeklySessionCounts,
+      now: today,
+    );
+
+    return List<bool>.generate(weekdayLabels.length, (index) {
+      final day = monday.add(Duration(days: index));
+      return active.contains(day);
+    });
+  }
+
+  static String dayKey([DateTime? date]) =>
+      _dayKey(_dateOnly(date ?? DateTime.now()));
 
   static DateTime _dateOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
