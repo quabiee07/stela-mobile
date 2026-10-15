@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
@@ -15,6 +16,7 @@ import 'package:stela_mobile/core/presentation/widgets/cached_image.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/core/presentation/widgets/pop_widget.dart';
+import 'package:stela_mobile/core/presentation/widgets/profile_avatar.dart';
 import 'package:stela_mobile/core/presentation/widgets/slide_animation_wrapper.dart';
 import 'package:stela_mobile/features/library/domain/models/story_reading_context.dart';
 import 'package:stela_mobile/features/library/presentation/manager/library_cubit.dart';
@@ -58,7 +60,6 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return BlocProvider.value(
       value: getIt.get<LibraryCubit>(),
       child: Scaffold(
@@ -71,6 +72,8 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
               builder: (context, state) {
                 final story = state.selectedStory;
                 final onSurface = theme.colorScheme.onSurface;
+                final hasNetworkCover =
+                    story?.coverImageUrl.startsWith('http') ?? false;
 
                 if (state.isLoadingDetail) {
                   return const Center(
@@ -103,10 +106,12 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
                                 const Gap(20),
                                 Clickable(
                                   onPressed: () {
-                                    context.read<LibraryCubit>().loadStoryDetail(
-                                      widget.storyId,
-                                      force: true,
-                                    );
+                                    context
+                                        .read<LibraryCubit>()
+                                        .loadStoryDetail(
+                                          widget.storyId,
+                                          force: true,
+                                        );
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -134,8 +139,6 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
                     ],
                   );
                 }
-
-                final hasNetworkCover = story.coverImageUrl.startsWith('http');
 
                 return Column(
                   children: [
@@ -168,101 +171,177 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Center(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 280,
-                                  child: hasNetworkCover
-                                      ? CachedImage(
-                                          asset: story.coverImageUrl,
-                                          width: double.infinity,
-                                          height: 280,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : CustomImage(
-                                          asset: story.coverImageUrl.isNotEmpty
-                                              ? story.coverImageUrl
-                                              : boyDragon,
-                                          width: double.infinity,
-                                          height: 280,
-                                          fit: BoxFit.cover,
-                                        ),
-                                ),
-                              ),
-                            ),
-                            const Gap(24),
-                            Center(
-                              child: Text(
-                                story.title,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 26,
-                                  color: onSurface,
-                                  height: 1.25,
-                                ),
-                              ),
-                            ),
-                            const Gap(10),
-                            Center(
-                              child: Text(
-                                story.tags,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: context.mutedText,
-                                ),
-                              ),
-                            ),
-                            const Gap(10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const AppIcon(
-                                  AppIcons.star,
-                                  color: amber,
-                                  size: 16,
-                                ),
-                                const Gap(6),
-                                Text(
-                                  '4.5 (1.4k)',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: context.mutedText,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      height: 280,
+                                      child: hasNetworkCover
+                                          ? CachedImage(
+                                              asset: story.coverImageUrl,
+                                              width: double.infinity,
+                                              height: 280,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : CustomImage(
+                                              asset:
+                                                  story.coverImageUrl.isNotEmpty
+                                                  ? story.coverImageUrl
+                                                  : boyDragon,
+                                              width: double.infinity,
+                                              height: 280,
+                                              fit: BoxFit.cover,
+                                            ),
+                                    ),
                                   ),
+                                )
+                                .animate()
+                                .fadeIn(duration: 350.ms)
+                                .scale(
+                                  begin: const Offset(0.96, 0.96),
+                                  end: const Offset(1, 1),
+                                  duration: 450.ms,
+                                  curve: Curves.easeOutCubic,
                                 ),
-                              ],
-                            ),
-                            const Gap(28),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Description',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
+                            const Gap(24),
+                            Text(
+                                  story.title,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.displayLarge?.copyWith(
+                                    // fontWeight: FontWeight.w500,
+                                    fontSize: 20,
                                     color: onSurface,
                                   ),
+                                )
+                                .animate()
+                                .fadeIn(delay: 80.ms, duration: 300.ms)
+                                .slideY(
+                                  begin: 0.12,
+                                  end: 0,
+                                  delay: 80.ms,
+                                  duration: 350.ms,
+                                  curve: Curves.easeOutCubic,
                                 ),
-                                Clickable(
-                                  onPressed: () {},
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: context.popButtonFill,
+                            const Gap(8),
+                            Row(
+                              children: [
+                                if (story.hasAuthor) ...[
+                                  Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ProfileAvatar(
+                                            avatarUrl:
+                                                story.authorPhotoUrl ?? '',
+                                            radius: 18,
+                                          ),
+                                          const Gap(10),
+                                          Text(
+                                            story.authorName,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                          ),
+                                        ],
+                                      )
+                                      .animate()
+                                      .fadeIn(delay: 160.ms, duration: 320.ms)
+                                      .slideY(
+                                        begin: 0.15,
+                                        end: 0,
+                                        delay: 160.ms,
+                                        duration: 380.ms,
+                                        curve: Curves.easeOutCubic,
+                                      ),
+                                ],
+                                const Gap(8),
+                                if (story.tags.isNotEmpty) ...[
+                                  const Gap(8),
+                                  Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: orange.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(
+                                          100,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        story.tags,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: orange,
+                                            ),
+                                      ),
                                     ),
-                                    child: const AppIcon(
-                                      AppIcons.favourite,
-                                      color: orange,
-                                      size: 20,
-                                    ),
+                                  ).animate().fadeIn(
+                                    delay: 120.ms,
+                                    duration: 300.ms,
                                   ),
+                                ],
+                              ],
+                            ),
+                            const Gap(8),
+                            Row(
+                              spacing: 8,
+                              children: [
+                                Row(
+                                  children: [
+                                    AppIcon(
+                                      AppIcons.bookOpen,
+                                      size: 20,
+                                      color: orange,
+                                    ),
+                                    const Gap(5),
+
+                                    Text(
+                                      '${story.totalChapters} Chapters',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 15,
+                                            color: grey500,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    AppIcon(
+                                      AppIcons.clock,
+                                      size: 20,
+                                      color: orange,
+                                    ),
+                                    const Gap(5),
+
+                                    Text(
+                                      '${story.readingTime} mins',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 15,
+                                            color: grey500,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
+                            const Gap(25),
+                            Text(
+                              'Description',
+                              style: theme.textTheme.displayLarge?.copyWith(
+                                fontSize: 20,
+                                color: onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
                             const Gap(14),
                             Container(
                               width: double.infinity,
@@ -280,7 +359,7 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
                                   color: onSurface.withValues(alpha: 0.85),
                                 ),
                               ),
-                            ),
+                            ).animate().fadeIn(delay: 280.ms, duration: 350.ms),
                             const Gap(32),
                           ],
                         ),
@@ -309,18 +388,17 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
 
                     final miniClearance =
                         floatingMini && playback.showMiniPlayer
-                            ? floatingMiniPlayerClearance(context)
-                            : 0.0;
+                        ? floatingMiniPlayerClearance(context)
+                        : 0.0;
                     final safeBottom = MediaQuery.paddingOf(context).bottom;
-                    // When the mini player owns the bottom inset, clearance
-                    // already includes it; otherwise pad for the home indicator.
-                    final bottomPad =
-                        miniClearance > 0 ? miniClearance : safeBottom;
+                    final bottomPad = miniClearance > 0
+                        ? miniClearance
+                        : safeBottom;
 
                     return Padding(
-                      padding: MediaQuery.of(context).viewInsets.add(
-                        EdgeInsets.only(bottom: bottomPad),
-                      ),
+                      padding: MediaQuery.of(
+                        context,
+                      ).viewInsets.add(EdgeInsets.only(bottom: bottomPad)),
                       child: SlideAnimationWrapper(
                         index: 1,
                         child: Builder(
@@ -333,9 +411,7 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
                               isEnabled: enabled,
                               onPressed: () {
                                 if (story.chapters.isEmpty) {
-                                  showError(
-                                    'This story has no chapters yet.',
-                                  );
+                                  showError('This story has no chapters yet.');
                                   return;
                                 }
 
@@ -349,8 +425,7 @@ class _StoryDescriptionScreenState extends State<StoryDescriptionScreen> {
                                       genre: story.genre,
                                       chapterId: firstChapter.chapterId,
                                       chapterTitle: firstChapter.title,
-                                      chapterNumber:
-                                          firstChapter.chapterNumber,
+                                      chapterNumber: firstChapter.chapterNumber,
                                       totalChapters: story.totalChapters,
                                       chapters: story.chapters,
                                       coverImageUrl: story.coverImageUrl,

@@ -297,7 +297,7 @@ class _StoryDetailScreenState extends CustomState<StoryDetailScreen> {
                   ),
                   BlocBuilder<StoryDetailCubit, StoryDetailState>(
                     buildWhen: (p, c) =>
-                        p.position != c.position ||
+                        p.position != c.position || 
                         p.totalDuration != c.totalDuration ||
                         p.isPlaying != c.isPlaying ||
                         p.isLoading != c.isLoading,

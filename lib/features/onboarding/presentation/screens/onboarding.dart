@@ -11,10 +11,10 @@ import 'package:stela_mobile/core/presentation/utils/snack_bar_utils.dart';
 import 'package:stela_mobile/core/presentation/widgets/button.dart';
 import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/core/presentation/widgets/svg_image.dart';
-import 'package:stela_mobile/core/presentation/widgets/social_sign_up_button.dart';
 import 'package:stela_mobile/features/auth/presentation/manager/auth_cubit.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/login.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/register.dart';
+import 'package:stela_mobile/features/auth/presentation/widgets/social_auth_buttons.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/dashboard.dart';
 import 'package:stela_mobile/features/onboarding/presentation/manager/onboarding_cubit.dart';
 import 'package:sprung/sprung.dart';
@@ -141,7 +141,8 @@ class _OnboardingScreenState extends CustomState<OnboardingScreen>
                           const Gap(26),
                           Text(
                             onboardingState
-                                .pages[onboardingState.currentIndex].title,
+                                .pages[onboardingState.currentIndex]
+                                .title,
                             textAlign: TextAlign.center,
                             style: theme.textTheme.displayLarge?.copyWith(
                               fontSize: 40,
@@ -185,14 +186,14 @@ class _OnboardingScreenState extends CustomState<OnboardingScreen>
                                 const Gap(16),
                                 BlocBuilder<AuthCubit, AuthFormState>(
                                   builder: (context, authState) {
-                                    return SocialSignUpButton(
-                                      isGoogle: true,
-                                      text: 'Get started with Google',
+                                    return SocialAuthButtons(
+                                      googleText: 'Get started with Google',
+                                      appleText: 'Get started with Apple',
                                       color: Colors.white,
-                                      isLoading: authState.googleLoading,
-                                      onTap: () {
-                                        authCubit.signInWithGoogle();
-                                      },
+                                      googleLoading: authState.googleLoading,
+                                      appleLoading: authState.appleLoading,
+                                      onGoogle: authCubit.signInWithGoogle,
+                                      onApple: authCubit.signInWithApple,
                                     );
                                   },
                                 ),
@@ -204,10 +205,10 @@ class _OnboardingScreenState extends CustomState<OnboardingScreen>
                                       'Already have an account? ',
                                       style: theme.textTheme.bodyMedium
                                           ?.copyWith(
-                                        color: const Color(0xFF5A7080),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                            color: const Color(0xFF5A7080),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                     ),
                                     InkWell(
                                       onTap: () {
@@ -218,10 +219,10 @@ class _OnboardingScreenState extends CustomState<OnboardingScreen>
                                         'Log In',
                                         style: theme.textTheme.bodyMedium
                                             ?.copyWith(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                              color: Colors.black,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ),
                                   ],

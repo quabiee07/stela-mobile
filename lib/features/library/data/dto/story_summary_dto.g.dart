@@ -16,6 +16,8 @@ StorySummaryDto _$StorySummaryDtoFromJson(Map<String, dynamic> json) =>
       readingTime: (json['readingTime'] as num).toInt(),
       totalChapters: (json['totalChapters'] as num).toInt(),
       ageRange: AgeRangeDto.fromJson(json['ageRange'] as Map<String, dynamic>),
+      authorName: json['authorName'] as String?,
+      authorPhotoUrl: json['authorPhotoUrl'] as String?,
     );
 
 Map<String, dynamic> _$StorySummaryDtoToJson(StorySummaryDto instance) =>
@@ -28,4 +30,6 @@ Map<String, dynamic> _$StorySummaryDtoToJson(StorySummaryDto instance) =>
       'readingTime': instance.readingTime,
       'totalChapters': instance.totalChapters,
       'ageRange': instance.ageRange.toJson(),
+      'authorName': instance.authorName,
+      'authorPhotoUrl': instance.authorPhotoUrl,
     };

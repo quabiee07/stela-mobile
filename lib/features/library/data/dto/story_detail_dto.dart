@@ -15,6 +15,8 @@ class StoryDetailDto {
   final int readingTime;
   final int totalChapters;
   final AgeRangeDto ageRange;
+  final String? authorName;
+  final String? authorPhotoUrl;
   final List<ChapterSummaryDto> chapters;
 
   const StoryDetailDto({
@@ -26,6 +28,8 @@ class StoryDetailDto {
     required this.readingTime,
     required this.totalChapters,
     required this.ageRange,
+    this.authorName,
+    this.authorPhotoUrl,
     required this.chapters,
   });
 
@@ -39,6 +43,8 @@ class StoryDetailDto {
       readingTime: readingTime,
       totalChapters: totalChapters,
       ageRange: ageRange.toDto(),
+      authorName: authorName?.trim() ?? '',
+      authorPhotoUrl: authorPhotoUrl,
       chapters: chapters.map((chapter) => chapter.toDto()).toList(),
     );
   }
@@ -53,6 +59,8 @@ class StoryDetailDto {
       readingTime: detail.readingTime,
       totalChapters: detail.totalChapters,
       ageRange: AgeRangeDto(min: detail.ageRange.min, max: detail.ageRange.max),
+      authorName: detail.authorName.isEmpty ? null : detail.authorName,
+      authorPhotoUrl: detail.authorPhotoUrl,
       chapters: detail.chapters
           .map(
             (chapter) => ChapterSummaryDto(

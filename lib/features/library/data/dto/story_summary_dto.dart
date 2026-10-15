@@ -14,6 +14,8 @@ class StorySummaryDto {
   final int readingTime;
   final int totalChapters;
   final AgeRangeDto ageRange;
+  final String? authorName;
+  final String? authorPhotoUrl;
 
   const StorySummaryDto({
     required this.storyId,
@@ -24,6 +26,8 @@ class StorySummaryDto {
     required this.readingTime,
     required this.totalChapters,
     required this.ageRange,
+    this.authorName,
+    this.authorPhotoUrl,
   });
 
   StorySummary toDto() {
@@ -36,6 +40,8 @@ class StorySummaryDto {
       readingTime: readingTime,
       totalChapters: totalChapters,
       ageRange: ageRange.toDto(),
+      authorName: authorName?.trim() ?? '',
+      authorPhotoUrl: authorPhotoUrl,
     );
   }
 

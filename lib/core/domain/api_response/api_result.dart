@@ -29,7 +29,9 @@ class ApiResult<T> {
   String toError() {
     final e = error!;
     if (e is AppFailure) {
-      Logger().e('ERROR: -> ${e.message}');
+      if (e is! CancelledFailure) {
+        Logger().e('ERROR: -> ${e.message}');
+      }
       return e.message;
     }
     if (e is DioException) {

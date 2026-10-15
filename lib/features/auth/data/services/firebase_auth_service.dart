@@ -1,8 +1,13 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:stela_mobile/core/config/app_secrets.dart';
 import 'package:stela_mobile/core/data/storage/secure_token_storage.dart';
+import 'package:stela_mobile/core/domain/errors/app_failure.dart';
 import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
 
 @lazySingleton
@@ -145,7 +150,74 @@ class FirebaseAuthService {
       await _persistFirebaseIdToken(user);
       logg("Google sign in successful");
       return userCredential;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        throw const CancelledFailure();
+      }
+      logg("Error: $e");
+      rethrow;
     } catch (e) {
+      if (e is CancelledFailure) rethrow;
+      logg("Error: $e");
+      rethrow;
+    }
+  }
+
+  Future<UserCredential?> signInWithApple() async {
+    try {
+      final rawNonce = generateNonce();
+      final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final idToken = appleCredential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw const UnexpectedFailure(
+          'Apple sign-in failed. Please try again.',
+        );
+      }
+
+      final oauthCredential = OAuthProvider(
+        'apple.com',
+      ).credential(idToken: idToken, rawNonce: rawNonce);
+
+      final userCredential = await _auth.signInWithCredential(oauthCredential);
+      final user = userCredential.user;
+      if (user == null) {
+        throw const UnexpectedFailure(
+          'Apple sign-in failed. Please try again.',
+        );
+      }
+
+      final displayName =
+          [appleCredential.givenName, appleCredential.familyName]
+              .whereType<String>()
+              .map((part) => part.trim())
+              .where((part) => part.isNotEmpty)
+              .join(' ');
+      if (displayName.isNotEmpty &&
+          (user.displayName == null || user.displayName!.isEmpty)) {
+        await user.updateDisplayName(displayName);
+      }
+
+      await _persistFirebaseIdToken(user);
+      logg("Apple sign in successful");
+      return userCredential;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw const CancelledFailure();
+      }
+      logg("Error: $e");
+      rethrow;
+    } catch (e) {
+      if (e is CancelledFailure || e is AppFailure) rethrow;
       logg("Error: $e");
       rethrow;
     }

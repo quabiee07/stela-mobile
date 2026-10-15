@@ -18,13 +18,14 @@ import 'package:stela_mobile/features/dashboard/presentation/manager/home_cubit.
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_cubit.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_state.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/profile_cubit.dart';
+import 'package:stela_mobile/features/profile/domain/models/level_progress.dart';
 import 'package:stela_mobile/features/profile/presentation/screens/edit_profile.dart';
 import 'package:stela_mobile/features/profile/presentation/screens/settings.dart';
 import 'package:stela_mobile/features/profile/presentation/screens/streak_calendar.dart';
 import 'package:stela_mobile/features/profile/presentation/widgets/badge_grid.dart';
 import 'package:stela_mobile/features/profile/presentation/widgets/stats_card.dart';
 import 'package:stela_mobile/features/profile/presentation/widgets/streak_card.dart';
-import 'package:video_player/video_player.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -36,7 +37,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends CustomState<ProfileScreen> {
   StreamSubscription<ProfileEffect>? _profileEffectsSub;
-  late final VideoPlayerController _controller;
+  
 
   @override
   void onStarted() {
@@ -53,7 +54,6 @@ class _ProfileScreenState extends CustomState<ProfileScreen> {
   @override
   void dispose() {
     _profileEffectsSub?.cancel();
-    _controller.dispose();
     super.dispose();
   }
 
@@ -188,7 +188,7 @@ class _ProfileScreenState extends CustomState<ProfileScreen> {
                                                   ),
                                                 ],
                                               ),
-                                              const Gap(8),
+                                              const Gap(4),
                                               Clickable(
                                                 onPressed: _openEditProfile,
                                                 child: Row(
@@ -224,14 +224,14 @@ class _ProfileScreenState extends CustomState<ProfileScreen> {
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const AppIcon(
-                                                    AppIcons.star,
+                                                  const Icon(
+                                                    Icons.star_rate_rounded,
                                                     color: amber,
                                                     size: 20,
                                                   ),
                                                   const Gap(4),
                                                   Text(
-                                                    'Level ${gamification.level} ${profile.title}',
+                                                    'Level ${gamification.level} ${LevelProgress.titleForLevel(gamification.level)}',
                                                     style: TextStyle(
                                                       fontSize: 13,
                                                       fontWeight:
@@ -241,7 +241,7 @@ class _ProfileScreenState extends CustomState<ProfileScreen> {
                                                   ),
                                                 ],
                                               ),
-                                              const Gap(24),
+                                              const Gap(12),
                                               Container(
                                                 padding:
                                                     const EdgeInsets.symmetric(

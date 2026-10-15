@@ -4,7 +4,10 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stela_mobile/core/data/services/reminder_banners.dart';
 import 'package:stela_mobile/core/domain/utils/constants.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:timezone/timezone.dart';
@@ -19,9 +22,15 @@ class NotificationService {
   NotificationService._internal();
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
   final _tokenUpdates = StreamController<String>.broadcast();
   StreamSubscription<String>? _tokenRefreshSub;
   bool _initialized = false;
+  bool _localReady = false;
+
+  static const _reminderIdBase = 7101;
+  static const _reminderDays = 7;
 
   /// Emits whenever a non-empty FCM token is obtained or refreshed.
   Stream<String> get tokenUpdates => _tokenUpdates.stream;
@@ -149,6 +158,110 @@ class NotificationService {
     }
 
     await getToken();
+    await applySavedReminder();
+  }
+
+  Future<void> _ensureTimezone() async {
+    try {
+      final currentTimeZone = await FlutterTimezone.getLocalTimezone();
+      region = currentTimeZone.identifier;
+      initializeTimeZones();
+      setLocalLocation(getLocation(currentTimeZone.identifier));
+    } catch (e) {
+      initializeTimeZones();
+    }
+  }
+
+  Future<void> _ensureLocalPlugin() async {
+    if (kIsWeb || _localReady) return;
+
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const darwin = DarwinInitializationSettings();
+    await _localNotifications.initialize(
+      settings: const InitializationSettings(android: android, iOS: darwin),
+    );
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
+    _localReady = true;
+  }
+
+  Future<void> applySavedReminder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool(isReminderEnabledKey) ?? false;
+      final hour = prefs.getInt(reminderHourKey) ?? 8;
+      final firstName = cachedUser?.name.split(' ').first;
+      await syncDailyReminder(
+        enabled: enabled,
+        hour: hour,
+        firstName: firstName,
+      );
+    } catch (e) {
+      debugPrint('Failed to apply saved reading reminder');
+    }
+  }
+
+  Future<void> syncDailyReminder({
+    required bool enabled,
+    required int hour,
+    String? firstName,
+  }) async {
+    if (kIsWeb) return;
+    await _ensureTimezone();
+    await _ensureLocalPlugin();
+    await cancelDailyReminder();
+    if (!enabled) return;
+
+    final now = TZDateTime.now(local);
+    var next = TZDateTime(
+      local,
+      now.year,
+      now.month,
+      now.day,
+      hour.clamp(0, 23),
+    );
+    if (!next.isAfter(now)) {
+      next = next.add(const Duration(days: 1));
+    }
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'stela_reading_reminder',
+        'Reading reminders',
+        channelDescription: 'Daily reminders to open Stela and keep reading',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBanner: true,
+        presentSound: true,
+      ),
+    );
+
+    for (var i = 0; i < _reminderDays; i++) {
+      final when = next.add(Duration(days: i));
+      final banner = ReminderBanners.forDate(when, firstName: firstName);
+      await _localNotifications.zonedSchedule(
+        id: _reminderIdBase + i,
+        title: banner.title,
+        body: banner.body,
+        scheduledDate: when,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    }
+  }
+
+  Future<void> cancelDailyReminder() async {
+    if (kIsWeb) return;
+    await _ensureLocalPlugin();
+    for (var i = 0; i < _reminderDays; i++) {
+      await _localNotifications.cancel(id: _reminderIdBase + i);
+    }
   }
 
   Future<void> dispose() async {

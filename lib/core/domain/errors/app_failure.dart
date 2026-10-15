@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Typed failures for the domain/UI boundary. Never surface raw [DioException].
 sealed class AppFailure extends Equatable implements Exception {
@@ -15,11 +17,15 @@ sealed class AppFailure extends Equatable implements Exception {
 }
 
 final class NetworkFailure extends AppFailure {
-  const NetworkFailure([super.message = 'Unable to connect. Check your internet.']);
+  const NetworkFailure([
+    super.message = 'Unable to connect. Check your internet.',
+  ]);
 }
 
 final class TimeoutFailure extends AppFailure {
-  const TimeoutFailure([super.message = 'Request timed out. Please try again.']);
+  const TimeoutFailure([
+    super.message = 'Request timed out. Please try again.',
+  ]);
 }
 
 final class UnauthorizedFailure extends AppFailure {
@@ -35,7 +41,9 @@ final class ForbiddenFailure extends AppFailure {
 }
 
 final class ValidationFailure extends AppFailure {
-  const ValidationFailure([super.message = 'Please check your input and try again.']);
+  const ValidationFailure([
+    super.message = 'Please check your input and try again.',
+  ]);
 }
 
 final class NotFoundFailure extends AppFailure {
@@ -54,12 +62,44 @@ final class CancelledFailure extends AppFailure {
 
 final class UnexpectedFailure extends AppFailure {
   const UnexpectedFailure([
-    super.message = 'Oops! An error occurred and the request could not be completed.',
+    super.message =
+        'Oops! An error occurred and the request could not be completed.',
   ]);
 }
 
 AppFailure mapToAppFailure(Object error) {
   if (error is AppFailure) return error;
+
+  if (error is GoogleSignInException) {
+    switch (error.code) {
+      case GoogleSignInExceptionCode.canceled:
+      case GoogleSignInExceptionCode.interrupted:
+        return const CancelledFailure();
+      default:
+        return UnexpectedFailure(
+          error.description ?? 'Google sign-in failed. Please try again.',
+        );
+    }
+  }
+
+  if (error is SignInWithAppleAuthorizationException) {
+    if (error.code == AuthorizationErrorCode.canceled) {
+      return const CancelledFailure();
+    }
+    return UnexpectedFailure(
+      error.message.isNotEmpty
+          ? error.message
+          : 'Apple sign-in failed. Please try again.',
+    );
+  }
+
+  if (error is SignInWithAppleNotSupportedException) {
+    return UnexpectedFailure(error.message);
+  }
+
+  if (error is SignInWithAppleException) {
+    return const UnexpectedFailure('Apple sign-in failed. Please try again.');
+  }
 
   if (error is DioException) {
     switch (error.type) {
@@ -94,7 +134,9 @@ AppFailure _fromStatusCode(int? statusCode, DioException error) {
     case 422:
       return ValidationFailure(serverMessage ?? 'Invalid data submitted.');
     case 401:
-      return UnauthorizedFailure(serverMessage ?? 'Unauthorized. Please log in again.');
+      return UnauthorizedFailure(
+        serverMessage ?? 'Unauthorized. Please log in again.',
+      );
     case 403:
       return ForbiddenFailure(serverMessage ?? "Access denied.");
     case 404:
@@ -107,7 +149,9 @@ AppFailure _fromStatusCode(int? statusCode, DioException error) {
     case 502:
     case 503:
     case 504:
-      return ServerFailure(serverMessage ?? 'Server error. Please try again later.');
+      return ServerFailure(
+        serverMessage ?? 'Server error. Please try again later.',
+      );
     default:
       return UnexpectedFailure(
         serverMessage ?? 'Unexpected error (${statusCode ?? 'unknown'}).',

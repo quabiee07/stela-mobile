@@ -4,7 +4,7 @@ import 'package:stela_mobile/core/domain/use_case/use_case.dart';
 import 'package:stela_mobile/features/auth/domain/models/login_payload.dart';
 import 'package:stela_mobile/features/auth/domain/repository/auth_repository.dart';
 
-class SignInUseCase implements UseCase<UserCredential?, LoginPayload>{
+class SignInUseCase implements UseCase<UserCredential?, LoginPayload> {
   late final AuthRepository authRepository;
   late final LoginPayload payload;
   SignInUseCase(this.authRepository, this.payload);
@@ -13,14 +13,12 @@ class SignInUseCase implements UseCase<UserCredential?, LoginPayload>{
   Future<ApiResult<UserCredential?>> invoke() {
     return authRepository.signInWithEmailAndPassword(param);
   }
-  
+
   @override
   LoginPayload get param => payload;
-  
 }
 
-
-class SignInWithGoogleUseCase implements UseCase<UserCredential?, void>{
+class SignInWithGoogleUseCase implements UseCase<UserCredential?, void> {
   late final AuthRepository authRepository;
   SignInWithGoogleUseCase(this.authRepository);
 
@@ -28,8 +26,20 @@ class SignInWithGoogleUseCase implements UseCase<UserCredential?, void>{
   Future<ApiResult<UserCredential?>> invoke() {
     return authRepository.signInWithGoogle();
   }
-  
+
   @override
   void get param => {};
-  
+}
+
+class SignInWithAppleUseCase implements UseCase<UserCredential?, void> {
+  late final AuthRepository authRepository;
+  SignInWithAppleUseCase(this.authRepository);
+
+  @override
+  Future<ApiResult<UserCredential?>> invoke() {
+    return authRepository.signInWithApple();
+  }
+
+  @override
+  void get param => {};
 }

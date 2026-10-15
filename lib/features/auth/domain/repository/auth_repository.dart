@@ -8,11 +8,16 @@ import 'package:stela_mobile/features/auth/domain/models/user_profile.dart';
 
 abstract class AuthRepository {
   Future<ApiResult<UserCredential>> signInWithGoogle();
+  Future<ApiResult<UserCredential>> signInWithApple();
   Future<ApiResult<UserCredential>> signUp(UserPayload payload);
-  Future<ApiResult<UserCredential>> signInWithEmailAndPassword(LoginPayload payload);
+  Future<ApiResult<UserCredential>> signInWithEmailAndPassword(
+    LoginPayload payload,
+  );
   Future<ApiResult<void>> signOut();
   Future<ApiResult<UserProfile>> getProfile();
-  Future<ApiResult<GenericModel>> completeOnboarding(ProfileSetupPayload payload);
+  Future<ApiResult<GenericModel>> completeOnboarding(
+    ProfileSetupPayload payload,
+  );
   Future<ApiResult<void>> saveUserProfile(ProfileSetupPayload payload);
   Future<ApiResult<bool>> resetPassword(String email);
 }

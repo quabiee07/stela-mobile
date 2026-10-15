@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
+import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
-import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
+import 'package:stela_mobile/core/presentation/widgets/svg_image.dart';
 import 'package:stela_mobile/features/profile/presentation/utils/gamification_display.dart';
 
 class StreakWeekRow extends StatelessWidget {
@@ -71,9 +71,7 @@ class _DayCell extends StatelessWidget {
           height: 32,
           decoration: BoxDecoration(color: circleColor, shape: BoxShape.circle),
           child: done
-              ? Center(
-                  child: AppIcon(AppIcons.check, size: 16, color: checkColor),
-                )
+              ? Center(child: SvgImage(asset: tick, width: 16, height: 16, color: checkColor))
               : null,
         ),
       ],

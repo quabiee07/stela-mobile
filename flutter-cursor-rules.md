@@ -39,11 +39,11 @@ Unless a project has an established alternative already in place, use:
 
 | Concern | Package |
 |---|---|
-| State management | `flutter_bloc` (BLoC pattern) |
+| State management | `provider` (BLoC pattern) |
 | Dependency injection | `get_it` |
 | Local storage / local DB | `isar` |
 | Model serialization | `json_serializable` (models scaffolded from `quicktype.io`) |
-| Network client + codegen | `dio` + `retrofit` (with `retrofit_generator` / `build_runner`) |
+| Network client + codegen | `dio` + `retrofit` (with `retrofit_generator` / `build_runner`) | (use `supabase` for now)
 | Network images / caching | `fast_cached_image` |
 | Icons | `huge_icons` |
 | Animations | `flutter_animate` |

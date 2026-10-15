@@ -232,6 +232,39 @@ class GamificationDisplay {
   static String dayKey([DateTime? date]) =>
       _dayKey(_dateOnly(date ?? DateTime.now()));
 
+  /// Normalizes API / cache date strings (`2026-10-02` or ISO timestamps)
+  /// into `YYYY-MM-DD` for comparisons.
+  static String? dayKeyFromRaw(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final parsed = DateTime.tryParse(raw);
+    if (parsed != null) return dayKey(parsed);
+    if (raw.length >= 10) return raw.substring(0, 10);
+    return null;
+  }
+
+  /// Week row with today's cell forced on — used by the daily celebration.
+  static List<bool> thisWeekCompletedWithTodayChecked({
+    required int currentStreak,
+    String? lastReadDate,
+    Map<String, int>? sessionCountsByDay,
+    List<int>? weeklySessionCounts,
+    DateTime? now,
+  }) {
+    final today = _dateOnly(now ?? DateTime.now());
+    final week = thisWeekCompleted(
+      currentStreak: currentStreak,
+      lastReadDate: lastReadDate,
+      sessionCountsByDay: sessionCountsByDay,
+      weeklySessionCounts: weeklySessionCounts,
+      now: today,
+    );
+    final index = today.weekday - DateTime.monday;
+    if (index >= 0 && index < week.length) {
+      week[index] = true;
+    }
+    return week;
+  }
+
   static DateTime _dateOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
 

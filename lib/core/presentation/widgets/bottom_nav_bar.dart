@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sprung/sprung.dart';
 import 'package:stela_mobile/core/presentation/resources/app_icons.dart';
+import 'package:stela_mobile/core/presentation/resources/drawables.dart';
 import 'package:stela_mobile/core/presentation/theme/colors/colors.dart';
 import 'package:stela_mobile/core/presentation/theme/theme_x.dart';
 import 'package:stela_mobile/core/presentation/widgets/app_icon.dart';
 import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
+import 'package:stela_mobile/core/presentation/widgets/svg_image.dart';
 
 class BottomNavBarItem {
   BottomNavBarItem({this.icon, required this.text});
@@ -14,10 +16,15 @@ class BottomNavBarItem {
   String text;
 
   static List<BottomNavBarItem> get items => [
-        BottomNavBarItem(text: 'Home', icon: AppIcons.home),
-        BottomNavBarItem(text: 'Library', icon: AppIcons.library),
-        BottomNavBarItem(text: 'Profile', icon: AppIcons.profile),
-      ];
+    BottomNavBarItem(text: 'Home', icon: AppIcons.home),
+    BottomNavBarItem(text: 'Library', icon: AppIcons.library),
+    BottomNavBarItem(text: 'Profile', icon: AppIcons.profile),
+  ];
+  static List<String> get selectedItemIcons => [
+    selectedHome,
+    selectedLibrary,
+    selectedProfile,
+  ];
 }
 
 class BottomNavBar extends StatefulWidget {
@@ -108,7 +115,9 @@ class _BottomNavBarState extends State<BottomNavBar>
         padding: const EdgeInsets.symmetric(horizontal: 50.0),
         child: Container(
           decoration: BoxDecoration(
-            color: context.isDarkTheme ? darkSurface : theme.colorScheme.surface,
+            color: context.isDarkTheme
+                ? darkSurface
+                : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
@@ -152,13 +161,19 @@ class _BottomNavBarState extends State<BottomNavBar>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                AppIcon(
-                  item.icon!,
-                  size: widget.iconSize ?? 24,
-                  color: widget.currentIndex == index
-                      ? orange
-                      : context.iconMuted,
-                ),
+                widget.currentIndex == index
+                    ? SvgImage(
+                        asset: BottomNavBarItem.selectedItemIcons[index],
+                        height: 24,
+                        width: 24,
+                      )
+                    : AppIcon(
+                        item.icon!,
+                        size: widget.iconSize ?? 24,
+                        color: widget.currentIndex == index
+                            ? orange
+                            : context.iconMuted,
+                      ),
                 Text(
                   item.text,
                   style: theme.textTheme.bodyMedium?.copyWith(

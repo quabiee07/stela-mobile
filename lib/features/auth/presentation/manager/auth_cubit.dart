@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
+import 'package:stela_mobile/core/domain/errors/app_failure.dart';
 import 'package:stela_mobile/core/domain/utils/constants.dart';
 import 'package:stela_mobile/core/presentation/utils/validation.dart';
 import 'package:stela_mobile/features/auth/domain/models/login_payload.dart';
@@ -52,6 +53,7 @@ class AuthFormState extends Equatable {
     this.isValidated = false,
     this.loading = false,
     this.googleLoading = false,
+    this.appleLoading = false,
   });
 
   final AuthFormMode mode;
@@ -66,14 +68,12 @@ class AuthFormState extends Equatable {
   final bool isValidated;
   final bool loading;
   final bool googleLoading;
+  final bool appleLoading;
 
   LoginPayload get loginPayload =>
       LoginPayload(email: email, password: password);
 
-  UserPayload get payload => UserPayload(
-        email: email,
-        password: password,
-      );
+  UserPayload get payload => UserPayload(email: email, password: password);
 
   AuthFormState copyWith({
     AuthFormMode? mode,
@@ -91,6 +91,7 @@ class AuthFormState extends Equatable {
     bool? isValidated,
     bool? loading,
     bool? googleLoading,
+    bool? appleLoading,
   }) {
     return AuthFormState(
       mode: mode ?? this.mode,
@@ -100,38 +101,43 @@ class AuthFormState extends Equatable {
       name: name ?? this.name,
       age: age ?? this.age,
       emailError: clearEmailError ? null : (emailError ?? this.emailError),
-      passwordError:
-          clearPasswordError ? null : (passwordError ?? this.passwordError),
+      passwordError: clearPasswordError
+          ? null
+          : (passwordError ?? this.passwordError),
       confirmPasswordError: clearConfirmPasswordError
           ? null
           : (confirmPasswordError ?? this.confirmPasswordError),
       isValidated: isValidated ?? this.isValidated,
       loading: loading ?? this.loading,
       googleLoading: googleLoading ?? this.googleLoading,
+      appleLoading: appleLoading ?? this.appleLoading,
     );
   }
 
   @override
   List<Object?> get props => [
-        mode,
-        email,
-        password,
-        confirmPassword,
-        name,
-        age,
-        emailError,
-        passwordError,
-        confirmPasswordError,
-        isValidated,
-        loading,
-        googleLoading,
-      ];
+    mode,
+    email,
+    password,
+    confirmPassword,
+    name,
+    age,
+    emailError,
+    passwordError,
+    confirmPasswordError,
+    isValidated,
+    loading,
+    googleLoading,
+    appleLoading,
+  ];
 }
 
 class AuthCubit extends Cubit<AuthFormState> {
-  AuthCubit({AuthRepository? repository, AuthFormMode mode = AuthFormMode.login})
-      : _repo = repository ?? getIt.get<AuthRepository>(),
-        super(AuthFormState(mode: mode));
+  AuthCubit({
+    AuthRepository? repository,
+    AuthFormMode mode = AuthFormMode.login,
+  }) : _repo = repository ?? getIt.get<AuthRepository>(),
+       super(AuthFormState(mode: mode));
 
   final AuthRepository _repo;
   final _effects = StreamController<AuthEffect>.broadcast();
@@ -179,7 +185,8 @@ class AuthCubit extends Cubit<AuthFormState> {
         confirmPasswordError: state.mode == AuthFormMode.register
             ? state.confirmPassword.validateRePassword(password)
             : null,
-        clearConfirmPasswordError: state.mode != AuthFormMode.register ||
+        clearConfirmPasswordError:
+            state.mode != AuthFormMode.register ||
             state.confirmPassword.validateRePassword(password) == null,
         isValidated: _computeValidated(
           mode: state.mode,
@@ -265,10 +272,17 @@ class AuthCubit extends Cubit<AuthFormState> {
   }
 
   Future<void> signInWithGoogle() async {
-    if (state.googleLoading) return;
+    if (state.googleLoading || state.appleLoading) return;
     emit(state.copyWith(googleLoading: true));
 
     final result = await SignInWithGoogleUseCase(_repo).invoke();
+    if (isClosed) return;
+
+    if (result.error is CancelledFailure) {
+      emit(state.copyWith(googleLoading: false));
+      return;
+    }
+
     final value = result.getOrElse((error) {
       _effects.add(AuthFailureEffect(error.toString()));
       return null;
@@ -283,6 +297,34 @@ class AuthCubit extends Cubit<AuthFormState> {
       );
     }
     if (!isClosed) emit(state.copyWith(googleLoading: false));
+  }
+
+  Future<void> signInWithApple() async {
+    if (state.googleLoading || state.appleLoading) return;
+    emit(state.copyWith(appleLoading: true));
+
+    final result = await SignInWithAppleUseCase(_repo).invoke();
+    if (isClosed) return;
+
+    if (result.error is CancelledFailure) {
+      emit(state.copyWith(appleLoading: false));
+      return;
+    }
+
+    final value = result.getOrElse((error) {
+      _effects.add(AuthFailureEffect(error.toString()));
+      return null;
+    });
+
+    if (isClosed) return;
+
+    if (value != null) {
+      await getIt.get<ReadingPreferencesCubit>().reload();
+      _effects.add(
+        AuthSuccessEffect(value, requiresSetup: await _requiresSetup()),
+      );
+    }
+    if (!isClosed) emit(state.copyWith(appleLoading: false));
   }
 
   Future<void> signIn() async {

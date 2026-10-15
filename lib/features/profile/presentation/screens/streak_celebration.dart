@@ -1,11 +1,15 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:stela_mobile/core/presentation/resources/drawables.dart';
+import 'package:stela_mobile/core/presentation/utils/celebration_feedback.dart';
 import 'package:stela_mobile/core/presentation/utils/cover_page_route.dart';
-import 'package:stela_mobile/core/presentation/utils/snack_bar_utils.dart';
+import 'package:stela_mobile/core/presentation/utils/navigation_mixin.dart';
+import 'package:stela_mobile/core/presentation/utils/xp_toast_overlay.dart';
 import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/success_screen.dart';
 import 'package:stela_mobile/features/profile/domain/models/level_progress.dart';
@@ -49,15 +53,21 @@ class StreakCelebrationScreen extends StatefulWidget {
 class _StreakCelebrationScreenState extends State<StreakCelebrationScreen> {
   var _shared = false;
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(CelebrationFeedback.streak());
+  }
+
   Future<void> _share() async {
     if (_shared) return;
     final success = await context.read<GamificationCubit>().shareAchievement();
     if (!mounted) return;
     if (success) {
       setState(() => _shared = true);
-      context.showSuccess(
-        'Shared! +${LevelProgress.shareXpReward} XP added to your profile.',
-      );
+      context.pop();
+      HapticFeedback.mediumImpact();
+      XpToastOverlay.show(context, xp: LevelProgress.shareXpReward);
     }
   }
 
@@ -70,7 +80,7 @@ class _StreakCelebrationScreenState extends State<StreakCelebrationScreen> {
           illustration: const _StreakMascot(),
           title: '${widget.streakDays}',
           titleStyle: const TextStyle(
-            fontSize: 88,
+            fontSize: 96,
             height: 1,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -100,7 +110,7 @@ class _StreakMascot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 220,
+      height: 300,
       width: 220,
       child: Stack(
         alignment: Alignment.center,
@@ -109,7 +119,11 @@ class _StreakMascot extends StatelessWidget {
             size: Size(220, 220),
             painter: _FlameBurstPainter(),
           ),
-          const CustomImage(asset: nameBunny, height: 170, fit: BoxFit.contain)
+          const CustomImage(
+                asset: successBunny,
+                height: 350,
+                fit: BoxFit.contain,
+              )
               .animate(onPlay: (controller) => controller.repeat(reverse: true))
               .moveY(
                 begin: 0,
@@ -180,7 +194,7 @@ class _FlameBurstPainter extends CustomPainter {
           const Color(0xFFFFF6B0),
         ],
       ).createShader(Rect.fromCircle(center: center, radius: flame.$2));
-      _drawFlame(canvas, center, flame.$1, flame.$2, flame.$3, flamePaint);
+      // _drawFlame(canvas, center, flame.$1, flame.$2, flame.$3, flamePaint);
     }
 
     final spark = Paint()..color = const Color(0xFFFFF4B0);
@@ -190,37 +204,7 @@ class _FlameBurstPainter extends CustomPainter {
     canvas.drawCircle(center + const Offset(54, 40), 3, spark);
   }
 
-  void _drawFlame(
-    Canvas canvas,
-    Offset center,
-    double angle,
-    double length,
-    double widthFactor,
-    Paint paint,
-  ) {
-    final tip = Offset(
-      center.dx + math.sin(angle) * length,
-      center.dy - math.cos(angle) * length,
-    );
-    final width = length * widthFactor;
-    final path = Path()
-      ..moveTo(center.dx - width * 0.35, center.dy + 18)
-      ..quadraticBezierTo(
-        center.dx - width,
-        center.dy - length * 0.25,
-        tip.dx,
-        tip.dy,
-      )
-      ..quadraticBezierTo(
-        center.dx + width,
-        center.dy - length * 0.25,
-        center.dx + width * 0.35,
-        center.dy + 18,
-      )
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
+  
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

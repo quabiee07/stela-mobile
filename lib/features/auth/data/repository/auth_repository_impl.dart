@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stela_mobile/core/data/services/notification_service.dart';
 import 'package:stela_mobile/core/data/storage/account_local_store.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/domain/api_response/api_result.dart';
@@ -68,9 +69,26 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<ApiResult<UserCredential>> signInWithApple() async {
+    try {
+      final result = await _firebaseAuth.signInWithApple();
+      if (result == null) {
+        return ApiResult.failure(
+          const UnauthorizedFailure('Apple sign-in failed. Please try again.'),
+        );
+      }
+      await _syncUserProfileIfExists();
+      return ApiResult.success(result);
+    } catch (e) {
+      return ApiResult.failure(mapToAppFailure(e));
+    }
+  }
+
+  @override
   Future<ApiResult<void>> signOut() async {
     try {
       await _firebaseAuth.signOut();
+      await NotificationService().cancelDailyReminder();
       return ApiResult.success(null);
     } catch (e) {
       return ApiResult.failure(mapToAppFailure(e));
@@ -229,8 +247,10 @@ class AuthRepositoryImpl implements AuthRepository {
       final firestore = getIt.get<FirebaseFirestore>();
       final prefs = await getIt.getAsync<SharedPreferences>();
 
-      final docSnapshot =
-          await firestore.collection("users").doc(user.uid).get();
+      final docSnapshot = await firestore
+          .collection("users")
+          .doc(user.uid)
+          .get();
 
       if (docSnapshot.exists && docSnapshot.data() != null) {
         final existingUser = UserModelDto.fromJson(docSnapshot.data()!);

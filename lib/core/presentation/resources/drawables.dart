@@ -45,6 +45,7 @@ const notification = 'assets/vectors/notification-bing.svg';
 const leftPolygon = 'assets/vectors/left.svg';
 const rightPolygon = 'assets/vectors/right.svg';
 const middlePolygon = 'assets/vectors/middle.svg';
+const tick = 'assets/vectors/tick.svg';
 
 //Bottom Nav Icons
 const home = 'assets/vectors/home.svg';
@@ -103,6 +104,10 @@ const avatar5 = 'assets/images/avatar5.png';
 const book = 'assets/images/Book.png';
 const clockk = 'assets/images/Clock.png';
 const warranty = 'assets/images/Warranty.png';
+const logoBunny = 'assets/images/logo-bunny.png';
+const diamond = 'assets/images/diamond.png';
+const successBunny = 'assets/images/success-bunny.png';
+
 
 //Badges
 const badgeDragonTamer = 'assets/images/dragon-tamer.png';
@@ -126,3 +131,8 @@ const onboard3 = 'assets/images/Shell.png';
 //Gifs
 const ageGif = 'assets/gifs/age.gif';
 const favStoryGif = 'assets/gifs/story.gif';
+
+//Selected Nav Icons
+const selectedHome = 'assets/vectors/home-filled.svg';
+const selectedLibrary = 'assets/vectors/notebook-filled.svg';
+const selectedProfile = 'assets/vectors/user-filled.svg';

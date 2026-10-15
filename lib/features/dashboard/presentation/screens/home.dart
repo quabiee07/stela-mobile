@@ -97,11 +97,16 @@ class _HomeScreenState extends CustomState<HomeScreen> {
                                 const _StreakChip(),
                               ],
                             ),
-                            ProfileAvatar(
-                              avatarUrl: state.profilePicture.isNotEmpty
-                                  ? state.profilePicture
-                                  : (cachedUser?.avatarUrl ?? ''),
-                              radius: 24,
+                            Clickable(
+                              onPressed: () {
+                                context.read<HomeCubit>().openProfileTab();
+                              },
+                              child: ProfileAvatar(
+                                avatarUrl: state.profilePicture.isNotEmpty
+                                    ? state.profilePicture
+                                    : (cachedUser?.avatarUrl ?? ''),
+                                radius: 24,
+                              ),
                             ),
                           ],
                         ),
@@ -114,36 +119,38 @@ class _HomeScreenState extends CustomState<HomeScreen> {
                             story.storyId,
                           ),
                         ),
-                        const Gap(24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Continue reading',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                        if (state.continueReading.isNotEmpty) ...[
+                          const Gap(24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Continue reading',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Clickable(
-                              onPressed: () {
-                                context.push(const ContinueReadingScreen());
-                              },
-                              child: Text(
-                                'See all',
-                                style: TextStyle(color: orange, fontSize: 14),
+                              Clickable(
+                                onPressed: () {
+                                  context.push(const ContinueReadingScreen());
+                                },
+                                child: Text(
+                                  'See all',
+                                  style: TextStyle(color: orange, fontSize: 14),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const Gap(16),
-                        ContinueReadingList(
-                          items: state.continueReading,
-                          maxItems: 3,
-                          onStoryTap: (item) => context
-                              .read<HomeCubit>()
-                              .resumeReading(context, item),
-                        ),
+                            ],
+                          ),
+                          const Gap(16),
+                          ContinueReadingList(
+                            items: state.continueReading,
+                            maxItems: 3,
+                            onStoryTap: (item) => context
+                                .read<HomeCubit>()
+                                .resumeReading(context, item),
+                          ),
+                        ],
                         const Gap(20),
                         NewStoriesSection(
                           stories: state.newStories,

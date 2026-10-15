@@ -13,6 +13,8 @@ class StoryDetail extends StorySummary {
     required super.readingTime,
     required super.totalChapters,
     required super.ageRange,
+    super.authorName,
+    super.authorPhotoUrl,
     required this.chapters,
   });
 }

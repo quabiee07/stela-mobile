@@ -10,6 +10,8 @@ class StorySummary {
   final int readingTime;
   final int totalChapters;
   final AgeRange ageRange;
+  final String authorName;
+  final String? authorPhotoUrl;
 
   const StorySummary({
     required this.storyId,
@@ -20,9 +22,20 @@ class StorySummary {
     required this.readingTime,
     required this.totalChapters,
     required this.ageRange,
+    this.authorName = '',
+    this.authorPhotoUrl,
   });
 
-  String get tags => '${formatGenreLabel(genre)} · Ages ${ageRange.min}-${ageRange.max}';
+  String get tags => formatGenreLabel(genre);
 
-  String get readTime => '$readingTime min read';
+  String get readTime =>
+      readingTime <= 0 ? 'Quick read' : '$readingTime min read';
+
+  String get chaptersLabel {
+    if (totalChapters <= 0) return 'Chapters coming soon';
+    if (totalChapters == 1) return '1 chapter';
+    return '$totalChapters chapters';
+  }
+
+  bool get hasAuthor => authorName.trim().isNotEmpty;
 }

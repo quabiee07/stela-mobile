@@ -101,7 +101,7 @@ class _AllBadgesSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final height = MediaQuery.sizeOf(context).height * 0.6;
+    final height = MediaQuery.sizeOf(context).height * 0.65;
 
     return Container(
       height: height,
@@ -135,9 +135,9 @@ class _AllBadgesSheet extends StatelessWidget {
               itemCount: badges.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
-                mainAxisSpacing: 8,
+                mainAxisSpacing: 12,
                 crossAxisSpacing: 8,
-                childAspectRatio: 0.62,
+                childAspectRatio: 0.52,
               ),
               itemBuilder: (context, index) {
                 return _BadgeTile(badge: badges[index]);
@@ -158,23 +158,25 @@ class _BadgeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unlocked = badge.unlocked;
+    final requirement = badge.definition.requirementLabel;
+    final muted = context.mutedText;
 
     return Column(
       children: [
         BadgeImage(definition: badge.definition, size: 68, unlocked: unlocked),
         const Gap(6),
-        // if (requirement.isNotEmpty)
-        //   Text(
-        //     requirement,
-        //     textAlign: TextAlign.center,
-        //     maxLines: 1,
-        //     overflow: TextOverflow.ellipsis,
-        //     style: TextStyle(
-        //       fontSize: 10,
-        //       color: context.mutedText,
-        //       fontWeight: FontWeight.w400,
-        //     ),
-        //   ),
+        if (!unlocked && requirement.isNotEmpty)
+          Text(
+            requirement,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10,
+              color: muted,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
         Text(
           badge.definition.name,
           textAlign: TextAlign.center,
@@ -186,6 +188,23 @@ class _BadgeTile extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
+        if (!unlocked) ...[
+          const Gap(4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: LinearProgressIndicator(
+              value: badge.fraction,
+              minHeight: 3,
+              backgroundColor: context.softBorder,
+              valueColor: const AlwaysStoppedAnimation(orange),
+            ),
+          ),
+          const Gap(2),
+          Text(
+            '${badge.current}/${badge.definition.target}',
+            style: TextStyle(fontSize: 9, color: muted),
+          ),
+        ],
       ],
     );
   }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
@@ -275,7 +276,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     if (state.isLoading || state.isCelebrating) return;
 
     if (state.isPlaying) {
-      logg('[StoryPlayback] Pausing at ${state.position.inSeconds}s');
+      debugPrint('[StoryPlayback] Pausing at ${state.position.inSeconds}s');
       emit(state.copyWith(isPlaying: false));
       await _player.pause();
       return;
@@ -287,7 +288,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     }
 
     if (_isLoaded && _audioFilePath != null) {
-      logg('[StoryPlayback] Resuming from ${state.position.inSeconds}s');
+      debugPrint('[StoryPlayback] Resuming from ${state.position.inSeconds}s');
       emit(state.copyWith(isPlaying: true));
 
       final playerState = _player.state;
@@ -318,7 +319,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     }
 
     final gen = ++_synthGen;
-    logg('[StoryPlayback] Synthesizing chapter via ElevenLabs...');
+    debugPrint('[StoryPlayback] Synthesizing chapter via ElevenLabs...');
     emit(
       state.copyWith(
         isLoading: true,
@@ -424,7 +425,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
   }
 
   Future<void> seekTo(double seconds) async {
-    logg('[StoryPlayback] Seeking to ${seconds.toStringAsFixed(1)}s');
+    // logg('[StoryPlayback] Seeking to ${seconds.toStringAsFixed(1)}s');
     final maxSecs = state.duration.inMilliseconds > 0
         ? state.duration.inMilliseconds / 1000.0
         : seconds;
@@ -462,9 +463,9 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
 
       await _player.seek(target).timeout(const Duration(seconds: 2));
     } on TimeoutException {
-      logg('[StoryPlayback] seek timed out — UI position kept');
+      debugPrint('[StoryPlayback] seek timed out — UI position kept');
     } catch (e) {
-      logg('[StoryPlayback] seek failed: $e');
+      debugPrint('[StoryPlayback] seek failed: $e');
     }
   }
 
@@ -480,7 +481,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     bool announce = false,
   }) async {
     if (state.isCelebrating) {
-      logg('[StoryPlayback] Ignoring jumpToChapter while celebrating');
+      debugPrint('[StoryPlayback] Ignoring jumpToChapter while celebrating');
       return;
     }
     final context = state.readingContext;
@@ -544,7 +545,7 @@ class StoryPlaybackCubit extends Cubit<StoryPlaybackState> {
     if (_handlingChapterComplete || !state.hasSession) return;
     _handlingChapterComplete = true;
 
-    logg('[StoryPlayback] Chapter playback completed.');
+    debugPrint('[StoryPlayback] Chapter playback completed.');
     _isLoaded = false;
 
     final finishingBook = state.isLastChapter;

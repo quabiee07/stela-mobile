@@ -11,10 +11,10 @@ import 'package:stela_mobile/core/presentation/widgets/clickable.dart';
 import 'package:stela_mobile/core/presentation/widgets/cubit_scaffold.dart';
 import 'package:stela_mobile/core/presentation/widgets/input_field.dart';
 import 'package:stela_mobile/core/presentation/widgets/scrollable_widget.dart';
-import 'package:stela_mobile/core/presentation/widgets/social_sign_up_button.dart';
 import 'package:stela_mobile/features/auth/presentation/manager/auth_cubit.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/login.dart';
 import 'package:stela_mobile/features/auth/presentation/screens/setup_account.dart';
+import 'package:stela_mobile/features/auth/presentation/widgets/social_auth_buttons.dart';
 import 'package:stela_mobile/features/dashboard/presentation/manager/home_cubit.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/dashboard.dart';
 
@@ -149,12 +149,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
               const Gap(16),
-              SocialSignUpButton(
-                isGoogle: true,
-                isLoading: state.googleLoading,
-                text: 'Sign in with Google',
+              SocialAuthButtons(
+                googleLoading: state.googleLoading,
+                appleLoading: state.appleLoading,
                 color: grey200,
-                onTap: cubit.signInWithGoogle,
+                onGoogle: cubit.signInWithGoogle,
+                onApple: cubit.signInWithApple,
               ),
               const Gap(24),
               Row(

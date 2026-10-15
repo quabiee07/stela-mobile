@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stela_mobile/core/data/services/notification_service.dart';
 import 'package:stela_mobile/core/di/core_module_container.dart';
 import 'package:stela_mobile/core/domain/utils/constants.dart';
 import 'package:stela_mobile/core/presentation/utils/helper_functions.dart';
@@ -27,9 +28,9 @@ class SettingsState extends Equatable {
   final bool isActivatingFreeze;
 
   DailyReminderPayload get payload => DailyReminderPayload(
-        dailyReminderEnabled: isReminderEnabled,
-        reminderHour: reminderHour,
-      );
+    dailyReminderEnabled: isReminderEnabled,
+    reminderHour: reminderHour,
+  );
 
   SettingsState copyWith({
     bool? isReminderEnabled,
@@ -50,12 +51,12 @@ class SettingsState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isReminderEnabled,
-        reminderHour,
-        streakFreezeActivated,
-        isSavingReminder,
-        isActivatingFreeze,
-      ];
+    isReminderEnabled,
+    reminderHour,
+    streakFreezeActivated,
+    isSavingReminder,
+    isActivatingFreeze,
+  ];
 }
 
 sealed class SettingsEffect {
@@ -73,8 +74,7 @@ final class SettingsSuccessEffect extends SettingsEffect {
 }
 
 class SettingsCubit extends Cubit<SettingsState> {
-  SettingsCubit(this._repo, this._prefsFuture)
-      : super(const SettingsState()) {
+  SettingsCubit(this._repo, this._prefsFuture) : super(const SettingsState()) {
     _loadLocalSettings();
   }
 
@@ -113,6 +113,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     await prefs.setInt(reminderHourKey, hour);
 
     logg('Setting daily reminder: enabled=$enabled, hour=$hour');
+    await _syncLocalReminder();
     await _syncReminderToServer();
   }
 
@@ -124,7 +125,22 @@ class SettingsCubit extends Cubit<SettingsState> {
     await prefs.setInt(reminderHourKey, clamped);
 
     if (state.isReminderEnabled) {
+      await _syncLocalReminder();
       await _syncReminderToServer();
+    }
+  }
+
+  Future<void> _syncLocalReminder() async {
+    try {
+      final user = await getCachedUser();
+      final firstName = user?.name.split(' ').first;
+      await NotificationService().syncDailyReminder(
+        enabled: state.isReminderEnabled,
+        hour: state.reminderHour,
+        firstName: firstName,
+      );
+    } catch (e) {
+      logg('Failed to schedule reading reminder');
     }
   }
 
@@ -133,12 +149,7 @@ class SettingsCubit extends Cubit<SettingsState> {
 
     final result = await SetReminderUseCase(_repo, state.payload).invoke();
     final value = result.getOrElse((error) {
-      emit(
-        state.copyWith(
-          isReminderEnabled: false,
-          isSavingReminder: false,
-        ),
-      );
+      emit(state.copyWith(isReminderEnabled: false, isSavingReminder: false));
       _effects.add(SettingsErrorEffect(error.toString()));
       return null;
     });
@@ -161,10 +172,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     final result = await ActivateStreakFreezeUseCase(_repo).invoke();
     final value = result.getOrElse((error) {
       emit(
-        state.copyWith(
-          streakFreezeActivated: false,
-          isActivatingFreeze: false,
-        ),
+        state.copyWith(streakFreezeActivated: false, isActivatingFreeze: false),
       );
       _effects.add(SettingsErrorEffect(error.toString()));
       return null;
@@ -191,6 +199,6 @@ class SettingsCubit extends Cubit<SettingsState> {
 }
 
 SettingsCubit createSettingsCubit() => SettingsCubit(
-      getIt.get<ProfileRepository>(),
-      getIt.getAsync<SharedPreferences>(),
-    );
+  getIt.get<ProfileRepository>(),
+  getIt.getAsync<SharedPreferences>(),
+);

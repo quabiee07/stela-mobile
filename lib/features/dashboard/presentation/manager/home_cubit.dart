@@ -63,6 +63,8 @@ class HomeCubit extends Cubit<HomeState> {
 
   void openLibraryTab() => setIndex(1);
 
+  void openProfileTab() => setIndex(2);
+
   Future<void> loadStories() async {
     emit(state.copyWith(isLoadingStories: true));
 

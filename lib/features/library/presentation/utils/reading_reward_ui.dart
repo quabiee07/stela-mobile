@@ -2,13 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:stela_mobile/core/presentation/utils/snack_bar_utils.dart';
+import 'package:stela_mobile/core/presentation/utils/xp_toast_overlay.dart';
 import 'package:stela_mobile/features/library/domain/models/reading_reward_event.dart';
 import 'package:stela_mobile/features/library/presentation/screens/story_complete.dart';
+import 'package:stela_mobile/features/profile/data/services/streak_celebration_store.dart';
 import 'package:stela_mobile/features/profile/domain/models/badge_definition.dart';
 import 'package:stela_mobile/features/profile/presentation/manager/gamification_cubit.dart';
 import 'package:stela_mobile/features/profile/presentation/screens/badge_unlock.dart';
 import 'package:stela_mobile/features/profile/presentation/screens/streak_celebration.dart';
+import 'package:stela_mobile/features/profile/presentation/utils/gamification_display.dart';
 
 class ReadingRewardUi {
   static final Set<String> _shownBadgeIds = {};
@@ -27,7 +29,6 @@ class ReadingRewardUi {
       if (event.result.alreadyLogged == true) return;
 
       final gamification = context.read<GamificationCubit>();
-      final previousStreak = gamification.state.streakInfo?.currentStreak;
       await gamification.applySessionResult(
         event.result,
         isBookComplete: event.isBookComplete,
@@ -39,16 +40,11 @@ class ReadingRewardUi {
       // Non-blocking — does not hold autoplay.
       final xp = gamification.state.lastXpEarned;
       if (xp != null && xp > 0) {
-        context.showSuccess('+$xp XP');
+        XpToastOverlay.show(context, xp: xp);
       }
 
       if (event.isBookComplete) {
-        await _showChapterRewards(
-          context,
-          event,
-          gamification,
-          previousStreak: previousStreak,
-        );
+        await _showChapterRewards(context, event, gamification);
         if (!context.mounted) return;
 
         await StoryCompleteScreen.open(
@@ -61,12 +57,7 @@ class ReadingRewardUi {
         return;
       }
 
-      await _showChapterRewards(
-        context,
-        event,
-        gamification,
-        previousStreak: previousStreak,
-      );
+      await _showChapterRewards(context, event, gamification);
     } finally {
       _completeGate(gate);
     }
@@ -81,20 +72,29 @@ class ReadingRewardUi {
   static Future<void> _showChapterRewards(
     BuildContext context,
     ReadingRewardEvent event,
-    GamificationCubit gamification, {
-    required int? previousStreak,
-  }) async {
-    final streak = event.currentStreak;
-    final streakIncreased =
-        streak != null &&
-        streak > 0 &&
-        (previousStreak == null || streak > previousStreak);
-    if (streakIncreased && context.mounted) {
-      await StreakCelebrationScreen.open(
-        context,
-        streakDays: streak,
-        weekCompleted: gamification.thisWeekCompleted,
-      );
+    GamificationCubit gamification,
+  ) async {
+    final streak =
+        event.currentStreak ?? gamification.state.streakInfo?.currentStreak ?? 0;
+    // First rewarded session of the day (if open didn't already celebrate).
+    if (streak > 0 && context.mounted) {
+      final store = StreakCelebrationStore();
+      if (!await store.wasShownToday()) {
+        await store.markShownToday();
+        if (!context.mounted) return;
+        final week = GamificationDisplay.thisWeekCompletedWithTodayChecked(
+          currentStreak: streak,
+          lastReadDate: gamification.state.streakInfo?.lastReadDate,
+          sessionCountsByDay: gamification.state.sessionCountsByDay,
+          weeklySessionCounts:
+              gamification.state.streakInfo?.weeklySessionCounts,
+        );
+        await StreakCelebrationScreen.open(
+          context,
+          streakDays: streak,
+          weekCompleted: week,
+        );
+      }
     }
 
     if (!context.mounted) return;

@@ -29,6 +29,7 @@ abstract final class AppIcons {
   static const AppIconData skipBack = HugeIcons.strokeRoundedCircleArrowLeft01;
   static const AppIconData skipForward = HugeIcons.strokeRoundedCircleArrowRight01;
   static const AppIconData bookOpen = HugeIcons.strokeRoundedBookOpen01;
+  static const AppIconData clock = HugeIcons.strokeRoundedClock01;
   static const AppIconData menu = HugeIcons.strokeRoundedMoreHorizontal;
   static const AppIconData text = HugeIcons.strokeRoundedTextFont;
   static const AppIconData voice = HugeIcons.strokeRoundedMic01;

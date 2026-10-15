@@ -138,7 +138,7 @@ class SuccessScreen extends StatelessWidget {
                                       begin: const Offset(0, 1),
                                       end: const Offset(1, 1),
                                     ),
-                            const Gap(40),
+                            const Gap(25),
                             if (title.isNotEmpty)
                               Text(
                                 title,
@@ -159,7 +159,7 @@ class SuccessScreen extends StatelessWidget {
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white,
                                   fontSize: 20,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],

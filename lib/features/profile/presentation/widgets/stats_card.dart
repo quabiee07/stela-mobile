@@ -31,7 +31,6 @@ class StatsCard extends StatelessWidget {
               color: onSurface,
             ),
           ),
-          const Gap(2),
           Text(
             label,
             style: TextStyle(

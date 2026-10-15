@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stela_mobile/core/presentation/utils/celebration_feedback.dart';
 import 'package:stela_mobile/core/presentation/utils/cover_page_route.dart';
-import 'package:stela_mobile/core/presentation/utils/snack_bar_utils.dart';
+import 'package:stela_mobile/core/presentation/utils/xp_toast_overlay.dart';
 import 'package:stela_mobile/features/dashboard/presentation/screens/success_screen.dart';
 import 'package:stela_mobile/features/profile/domain/models/badge_definition.dart';
 import 'package:stela_mobile/features/profile/domain/models/level_progress.dart';
@@ -41,9 +44,8 @@ class _BadgeUnlockScreenState extends State<BadgeUnlockScreen> {
     if (!mounted) return;
     if (success) {
       setState(() => _shared = true);
-      context.showSuccess(
-        'Shared! +${LevelProgress.shareXpReward} XP added to your profile.',
-      );
+      HapticFeedback.mediumImpact();
+      XpToastOverlay.show(context, xp: LevelProgress.shareXpReward);
     }
   }
 
@@ -70,34 +72,106 @@ class _BadgeUnlockScreenState extends State<BadgeUnlockScreen> {
   }
 }
 
-class _BadgeHero extends StatelessWidget {
+class _BadgeHero extends StatefulWidget {
   const _BadgeHero({required this.definition});
 
   final BadgeDefinition definition;
 
   @override
+  State<_BadgeHero> createState() => _BadgeHeroState();
+}
+
+class _BadgeHeroState extends State<_BadgeHero> {
+  var _routeSettled = false;
+  var _listening = false;
+  Animation<double>? _routeAnimation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == null || identical(animation, _routeAnimation)) return;
+
+    _routeAnimation?.removeStatusListener(_onRouteStatus);
+    _routeAnimation = animation;
+
+    if (animation.status == AnimationStatus.completed) {
+      _onRouteSettled();
+    } else if (!_listening) {
+      _listening = true;
+      animation.addStatusListener(_onRouteStatus);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeAnimation?.removeStatusListener(_onRouteStatus);
+    super.dispose();
+  }
+
+  void _onRouteStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _onRouteSettled();
+    }
+  }
+
+  void _onRouteSettled() {
+    if (!mounted || _routeSettled) return;
+    setState(() => _routeSettled = true);
+    unawaited(CelebrationFeedback.badge());
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 220,
-      height: 220,
+      width: 270,
+      height: 270,
       child: Stack(
+        clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          const CustomPaint(size: Size(220, 220), painter: _BadgeGlowPainter()),
-          BadgeImage(definition: definition, size: 168)
-              .animate(onPlay: (controller) => controller.repeat(reverse: true))
-              .scale(
-                begin: const Offset(1, 1),
-                end: const Offset(1.06, 1.06),
-                duration: 900.ms,
-              )
-              .animate()
-              .fade(duration: 400.ms)
-              .scale(
-                begin: const Offset(0.6, 0.6),
-                curve: Curves.easeOutBack,
-                duration: 500.ms,
-              ),
+          if (_routeSettled)
+            const CustomPaint(
+                  size: Size(250, 250),
+                  painter: _BadgeGlowPainter(),
+                )
+                .animate()
+                .fadeIn(duration: 400.ms),
+          // Invisible placeholder keeps layout stable while waiting.
+          if (!_routeSettled)
+            const SizedBox(width: 200, height: 200)
+          else
+            BadgeImage(definition: widget.definition, size: 200)
+                .animate(delay: 80.ms)
+                .fadeIn(duration: 200.ms, curve: Curves.easeInCubic)
+                .slideY(
+                  begin: 1.15,
+                  end: 0,
+                  duration: 780.ms,
+                  curve: Curves.easeOutBack,
+                )
+                .scale(
+                  begin: const Offset(0.55, 0.55),
+                  end: const Offset(1, 1),
+                  duration: 900.ms,
+                  curve: Curves.elasticOut,
+                )
+                .animate(
+                  delay: 850.ms,
+                  onPlay: (controller) => controller.repeat(reverse: true),
+                )
+                .moveY(
+                  begin: 0,
+                  end: -8,
+                  duration: 1100.ms,
+                  curve: Curves.easeInOut,
+                )
+                .scale(
+                  begin: const Offset(1, 1),
+                  end: const Offset(1.04, 1.04),
+                  duration: 1100.ms,
+                  curve: Curves.easeInOut,
+                ),
         ],
       ),
     );

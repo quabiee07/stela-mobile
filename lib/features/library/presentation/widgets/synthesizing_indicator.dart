@@ -33,42 +33,55 @@ class SynthesizingIndicator extends StatelessWidget {
       child: ColoredBox(
         color: context.cardSurface.withValues(alpha: 0.92),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const _NarratorBars(),
-              const Gap(18),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                child: Text(
-                  label,
-                  key: ValueKey(label),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
-                    color: Theme.of(context).colorScheme.onSurface,
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const _NarratorBars(),
+                      const Gap(12),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: Text(
+                          label,
+                          key: ValueKey(label),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const Gap(12),
+                      _ProgressTrack(progress: progress),
+                      if (percent != null) ...[
+                        const Gap(8),
+                        Text(
+                          '$percent%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: context.mutedText,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              ),
-              const Gap(16),
-              _ProgressTrack(progress: progress),
-              if (percent != null) ...[
-                const Gap(8),
-                Text(
-                  '$percent%',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: context.mutedText,
-                  ),
-                ),
-              ],
-            ],
+              );
+            },
           ),
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:stela_mobile/core/presentation/widgets/custom_image.dart';
 import 'package:stela_mobile/features/profile/domain/models/badge_definition.dart';
 
 class BadgeImage extends StatelessWidget {
@@ -17,8 +18,8 @@ class BadgeImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final Widget image;
     if (definition.asset.isNotEmpty) {
-      image = Image.asset(
-        definition.asset,
+      image = CustomImage(
+        asset: definition.asset,
         width: size,
         height: size,
         fit: BoxFit.contain,
